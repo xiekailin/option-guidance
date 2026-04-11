@@ -12,27 +12,14 @@ import {
   buildSyntheticLongRecommendations,
   getSyntheticLongMethodology,
 } from "@/lib/domain/synthetic-long";
+import { fetchBtcTicker, fetchOptionsChain } from "@/lib/market/deribit-client";
 import { validateRecommendationInput } from "@/lib/domain/calculations";
 import type {
   ExpiryPayoff,
-  MarketTickerResponse,
-  OptionsChainResponse,
   Recommendation,
   RecommendationInput,
   SyntheticLongRecommendation,
 } from "@/lib/types/option";
-
-const fetcher = async <T,>(url: string): Promise<T> => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as
-      | { error?: string; message?: string }
-      | null;
-    throw new Error(payload?.message ?? payload?.error ?? `Request failed: ${response.status}`);
-  }
-
-  return response.json() as Promise<T>;
-};
 
 const defaultInput: RecommendationInput = {
   strategy: "covered-call",
@@ -79,7 +66,7 @@ export function OptionsDashboard() {
     error: tickerError,
     isLoading: tickerLoading,
     mutate: refreshTicker,
-  } = useSWR<MarketTickerResponse>("/api/market/btc", fetcher, {
+  } = useSWR("btc-ticker", fetchBtcTicker, {
     refreshInterval: 10_000,
     revalidateOnFocus: false,
   });
@@ -89,7 +76,7 @@ export function OptionsDashboard() {
     error: chainError,
     isLoading: chainLoading,
     mutate: refreshChain,
-  } = useSWR<OptionsChainResponse>("/api/options/chain", fetcher, {
+  } = useSWR("options-chain", fetchOptionsChain, {
     refreshInterval: 20_000,
     revalidateOnFocus: false,
   });

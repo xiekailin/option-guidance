@@ -8,7 +8,6 @@ import {
 import type { OptionContract } from "../types/option";
 
 const DERIBIT_API_BASE = "https://www.deribit.com/api/v2/public";
-export const DERIBIT_REVALIDATE_SECONDS = 20;
 
 export class DeribitApiError extends Error {
   constructor(
@@ -58,7 +57,6 @@ export async function fetchDeribitJson<T>(path: string): Promise<T> {
       headers: {
         Accept: "application/json",
       },
-      next: { revalidate: DERIBIT_REVALIDATE_SECONDS },
       signal: controller.signal,
     });
 
