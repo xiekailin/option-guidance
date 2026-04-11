@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import useSWR from "swr";
-import { Activity, AlertTriangle, RefreshCw } from "lucide-react";
+import { Activity, AlertTriangle, BookOpen, ChevronRight, HelpCircle, RefreshCw } from "lucide-react";
+import { Dialog } from "@/components/ui/dialog";
 import { RecommendationSummary } from "@/components/dashboard/recommendation-summary";
 import { OptionDetailDrawer } from "@/components/recommendation/option-detail-drawer";
 import { OptionsRecommendationTable } from "@/components/recommendation/options-recommendation-table";
@@ -42,6 +43,8 @@ export function OptionsDashboard() {
   const [input, setInput] = useState<RecommendationInput>(defaultInput);
   const [selected, setSelected] = useState<Recommendation | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("recommendations");
+  const [showMethodology, setShowMethodology] = useState(false);
+  const [showReadingGuide, setShowReadingGuide] = useState(false);
 
   const {
     data: ticker,
@@ -131,6 +134,13 @@ export function OptionsDashboard() {
           <PageSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
           <div className="min-w-0 flex-1 space-y-5">
+            {/* 面包屑 */}
+            <nav className="flex items-center gap-1.5 text-xs text-slate-500">
+              <span>首页</span>
+              <ChevronRight className="size-3" />
+              <span className="text-slate-300">{getTabLabel(activeTab)}</span>
+            </nav>
+
             {activeTab === "recommendations" && (
               <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
                 <section>
@@ -138,53 +148,69 @@ export function OptionsDashboard() {
                 </section>
 
                 <section className="space-y-5">
-                  <section>
-                    {isSyntheticMode ? (
-                      <TopSyntheticPanel recommendation={topSyntheticRecommendation} />
-                    ) : (
-                      <TopRecommendationPanel recommendation={topRecommendation} strategy={input.strategy} />
-                    )}
-                  </section>
+                  {/* 操作按钮行 */}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowReadingGuide(true)}
+                      className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300 transition hover:border-cyan-400/30 hover:text-white"
+                    >
+                      <HelpCircle className="size-3.5" />
+                      结果解读
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowMethodology(true)}
+                      className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300 transition hover:border-cyan-400/30 hover:text-white"
+                    >
+                      <BookOpen className="size-3.5" />
+                      算法说明
+                    </button>
+                  </div>
 
-                  <section className="space-y-5">
-                    {isSyntheticMode ? (
-                      <SyntheticInterpretationPanel
-                        methodology={syntheticMethodology}
-                        recommendation={topSyntheticRecommendation}
-                      />
-                    ) : (
-                      <ResultInterpretationPanel
-                        methodology={standardMethodology}
-                        recommendation={topRecommendation}
-                      />
-                    )}
+                  {/* 首选建议 */}
+                  {isSyntheticMode ? (
+                    <TopSyntheticPanel recommendation={topSyntheticRecommendation} />
+                  ) : (
+                    <TopRecommendationPanel recommendation={topRecommendation} strategy={input.strategy} />
+                  )}
 
-                    {hasError ? (
-                      <ErrorPanel message={getDisplayErrorMessage(tickerError, chainError)} />
-                    ) : isLoading ? (
-                      <LoadingPanel />
-                    ) : inputErrors.length > 0 ? (
-                      <ErrorPanel title="输入需要修正" message={inputErrors.join(" ")} />
-                    ) : isSyntheticMode ? (
-                      <SyntheticRecommendationList recommendations={syntheticRecommendations} />
-                    ) : (
-                      <OptionsRecommendationTable
-                        recommendations={standardRecommendations}
-                        onSelect={(recommendation) => setSelected(recommendation)}
-                      />
-                    )}
-                  </section>
-
-                  <section>
-                    {isSyntheticMode ? (
-                      <SyntheticMethodologyPanel methodology={syntheticMethodology} />
-                    ) : (
-                      <MethodologyPanel methodology={standardMethodology} />
-                    )}
-                  </section>
+                  {/* 推荐列表 */}
+                  {hasError ? (
+                    <ErrorPanel message={getDisplayErrorMessage(tickerError, chainError)} />
+                  ) : isLoading ? (
+                    <LoadingPanel />
+                  ) : inputErrors.length > 0 ? (
+                    <ErrorPanel title="输入需要修正" message={inputErrors.join(" ")} />
+                  ) : isSyntheticMode ? (
+                    <SyntheticRecommendationList recommendations={syntheticRecommendations} />
+                  ) : (
+                    <OptionsRecommendationTable
+                      recommendations={standardRecommendations}
+                      onSelect={(recommendation) => setSelected(recommendation)}
+                    />
+                  )}
                 </section>
               </div>
             )}
+
+            {/* 结果解读弹框 */}
+            <Dialog open={showReadingGuide} onClose={() => setShowReadingGuide(false)} title={isSyntheticMode ? "这张组合怎么读" : "推荐结果怎么读"}>
+              {isSyntheticMode ? (
+                <SyntheticInterpretationPanel methodology={syntheticMethodology} recommendation={topSyntheticRecommendation} />
+              ) : (
+                <ResultInterpretationPanel methodology={standardMethodology} recommendation={topRecommendation} />
+              )}
+            </Dialog>
+
+            {/* 算法说明弹框 */}
+            <Dialog open={showMethodology} onClose={() => setShowMethodology(false)} title={isSyntheticMode ? "组合算法说明" : "算法说明"}>
+              {isSyntheticMode ? (
+                <SyntheticMethodologyPanel methodology={syntheticMethodology} />
+              ) : (
+                <MethodologyPanel methodology={standardMethodology} />
+              )}
+            </Dialog>
 
             {activeTab === "calculator" && (
               <PayoffCalculator
@@ -238,6 +264,17 @@ function getStrategyModeLabel(strategy: RecommendationInput["strategy"]): string
   }
 }
 
+function getTabLabel(tab: TabKey): string {
+  const map: Record<TabKey, string> = {
+    recommendations: "策略推荐",
+    calculator: "损益计算",
+    comparison: "策略对比",
+    volatility: "波动率",
+    risk: "风险提示",
+  };
+  return map[tab];
+}
+
 function getDisplayErrorMessage(tickerError: unknown, chainError: unknown): string {
   if (tickerError && chainError) {
     return "行情和期权数据暂时都没有加载成功，请稍后刷新再试。";
@@ -274,19 +311,14 @@ function TopRecommendationPanel({
   }
 
   return (
-    <section className="rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-6 shadow-2xl shadow-cyan-950/20">
+    <section className="rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-5 shadow-2xl shadow-cyan-950/20">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="max-w-3xl">
           <p className="text-sm font-medium text-cyan-200">当前首选建议</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">{recommendation.contract.instrumentName}</h2>
-          <p className="mt-3 text-sm leading-7 text-cyan-50/90">{recommendation.summary}</p>
-          <p className="mt-3 text-xs leading-6 text-cyan-100/80">
-            {strategy === "covered-call"
-              ? "不是只看谁租金最高，而是综合触发概率、到期时间、租金和上涨空间来挑选最合适的。"
-              : "不是只看谁租金最高，而是综合触发概率、到期时间、租金和跌价保护来挑选最合适的。"}
-          </p>
+          <h2 className="mt-1 text-xl font-semibold text-white">{recommendation.contract.instrumentName}</h2>
+          <p className="mt-2 text-sm leading-6 text-cyan-50/90">{recommendation.summary}</p>
         </div>
-        <div className="grid gap-3 rounded-3xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-200 sm:grid-cols-2 md:min-w-[360px]">
+        <div className="grid gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-200 sm:grid-cols-2 md:min-w-[340px]">
           <MiniMetric label="评分" value={`${recommendation.score}`} />
           <MiniMetric label="触发概率" value={`${Math.abs(recommendation.contract.delta ?? 0).toFixed(3)}`} />
           <MiniMetric label="单张租金" value={formatUsdAmount(recommendation.premiumPerMinContractUsd)} />
@@ -295,29 +327,6 @@ function TopRecommendationPanel({
             value={`${recommendation.contract.otmPercent}%`}
           />
         </div>
-      </div>
-
-      <div className="mt-6">
-        <p className="text-xs uppercase tracking-[0.2em] text-cyan-100/80">模型优先看的维度</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {recommendation.algorithmTags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full border border-white/10 bg-slate-950/40 px-3 py-1.5 text-xs text-cyan-50/90"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-6 grid gap-3 lg:grid-cols-3">
-        {recommendation.reasons.slice(0, 3).map((reason, index) => (
-          <article key={reason} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">原因 {index + 1}</p>
-            <p className="mt-3 text-sm leading-7 text-slate-100">{reason}</p>
-          </article>
-        ))}
       </div>
 
       <ExpiryPayoffCard payoff={recommendation.expiryPayoff} />
@@ -335,33 +344,21 @@ function TopSyntheticPanel({ recommendation }: { recommendation: SyntheticLongRe
   }
 
   return (
-    <section className="rounded-3xl border border-fuchsia-400/20 bg-fuchsia-400/10 p-6 shadow-2xl shadow-fuchsia-950/20">
+    <section className="rounded-3xl border border-fuchsia-400/20 bg-fuchsia-400/10 p-5 shadow-2xl shadow-fuchsia-950/20">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="max-w-3xl">
           <p className="text-sm font-medium text-fuchsia-200">当前首选组合</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">
+          <h2 className="mt-1 text-xl font-semibold text-white">
             买 {recommendation.pair.call.instrumentName} / 卖 {recommendation.pair.put.instrumentName}
           </h2>
-          <p className="mt-3 text-sm leading-7 text-fuchsia-50/90">{recommendation.summary}</p>
-          <p className="mt-3 text-xs leading-6 text-fuchsia-100/80">
-            这不是稳定收租，而是用卖看跌赚的钱去补买看涨的成本，接近零成本但风险不小。
-          </p>
+          <p className="mt-2 text-sm leading-6 text-fuchsia-50/90">{recommendation.summary}</p>
         </div>
-        <div className="grid gap-3 rounded-3xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-200 sm:grid-cols-2 md:min-w-[360px]">
+        <div className="grid gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-200 sm:grid-cols-2 md:min-w-[340px]">
           <MiniMetric label="评分" value={`${recommendation.score}`} />
           <MiniMetric label="净权利金" value={formatUsdAmount(recommendation.pair.netPremiumUsdPerMinContract)} />
           <MiniMetric label="可做最大张数" value={`${recommendation.maxLots}`} />
           <MiniMetric label="名义 BTC" value={`${recommendation.maxTradeAmountBtc} BTC`} />
         </div>
-      </div>
-
-      <div className="mt-6 grid gap-3 lg:grid-cols-3">
-        {recommendation.reasons.slice(0, 3).map((reason, index) => (
-          <article key={reason} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-fuchsia-200">原因 {index + 1}</p>
-            <p className="mt-3 text-sm leading-7 text-slate-100">{reason}</p>
-          </article>
-        ))}
       </div>
 
       <ExpiryPayoffCard payoff={recommendation.expiryPayoff} />
