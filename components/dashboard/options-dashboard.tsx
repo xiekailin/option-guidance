@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import useSWR from "swr";
-import { Activity, AlertTriangle, BadgeDollarSign, Clock3, RefreshCw, ShieldCheck } from "lucide-react";
+import { Activity, AlertTriangle, RefreshCw } from "lucide-react";
 import { RecommendationSummary } from "@/components/dashboard/recommendation-summary";
 import { OptionDetailDrawer } from "@/components/recommendation/option-detail-drawer";
 import { OptionsRecommendationTable } from "@/components/recommendation/options-recommendation-table";
@@ -83,53 +83,38 @@ export function OptionsDashboard() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#12385a_0%,#07111d_32%,#020617_70%)] text-slate-100">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
-        <header className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/65 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs uppercase tracking-[0.25em] text-cyan-200">
-                <Activity className="size-3.5" />
-                BTC Option Rent Desk
-              </div>
-              <h1 className="mt-5 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-                实时期权指导网页
-              </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-                输入你的 BTC 仓位、可用资金、周期偏好和风险承受力，页面会实时拉取 BTC 价格与 Deribit 期权链，给出三种策略建议：持有 BTC 卖看涨赚租金、卖看跌准备低价买入 BTC、或者用买卖期权组合模拟持有 BTC。
-              </p>
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
+        {/* 紧凑头部：一行搞定标题 + 状态 */}
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-cyan-400/10">
+              <Activity className="size-5 text-cyan-400" />
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 lg:w-[360px]">
-              <StatusPill
-                icon={<BadgeDollarSign className="size-4" />}
-                label="BTC 现价"
-                value={ticker?.price ? `$${ticker.price.toLocaleString()}` : "加载中"}
-              />
-              <StatusPill
-                icon={<Clock3 className="size-4" />}
-                label="数据源"
-                value={chain?.source ?? ticker?.source ?? "Deribit public API"}
-              />
-              <StatusPill
-                icon={<ShieldCheck className="size-4" />}
-                label="当前模式"
-                value={getStrategyModeLabel(input.strategy)}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  void refreshTicker();
-                  void refreshChain();
-                }}
-                className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm font-medium text-white transition hover:border-cyan-400/40 hover:bg-cyan-400/10"
-              >
-                <RefreshCw className="size-4" />
-                手动刷新行情
-              </button>
+            <div>
+              <h1 className="text-xl font-bold text-white">BTC 期权收租指导</h1>
+              <p className="text-xs text-slate-500">实时拉取 Deribit 行情，给你个性化的策略建议</p>
             </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
+              <span className="text-slate-500">BTC</span>{" "}
+              <span className="font-semibold text-white">{ticker?.price ? `$${ticker.price.toLocaleString()}` : "..."}</span>
+            </span>
+            <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
+              <span className="text-slate-500">模式</span>{" "}
+              <span className="font-medium text-cyan-300">{getStrategyModeLabel(input.strategy)}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => { void refreshTicker(); void refreshChain(); }}
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-slate-400 transition hover:border-cyan-400/30 hover:text-white"
+            >
+              <RefreshCw className="size-3.5" />
+            </button>
           </div>
         </header>
 
+        {/* 摘要卡片 */}
         <RecommendationSummary
           price={ticker?.price}
           recommendation={topRecommendation}
@@ -139,19 +124,20 @@ export function OptionsDashboard() {
           updatedAt={chain?.updatedAt ?? ticker?.updatedAt}
         />
 
+        {/* 移动端标签 + 桌面端侧边栏 */}
         <PageTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-        <div className="flex gap-8">
+        <div className="flex gap-6">
           <PageSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
-          <div className="min-w-0 flex-1 space-y-6">
+          <div className="min-w-0 flex-1 space-y-5">
             {activeTab === "recommendations" && (
-              <div className="grid gap-8 xl:grid-cols-[380px_minmax(0,1fr)]">
+              <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
                 <section>
                   <StrategyForm input={input} onChange={setInput} />
                 </section>
 
-                <section className="space-y-6">
+                <section className="space-y-5">
                   <section>
                     {isSyntheticMode ? (
                       <TopSyntheticPanel recommendation={topSyntheticRecommendation} />
@@ -160,7 +146,7 @@ export function OptionsDashboard() {
                     )}
                   </section>
 
-                  <section className="space-y-6">
+                  <section className="space-y-5">
                     {isSyntheticMode ? (
                       <SyntheticInterpretationPanel
                         methodology={syntheticMethodology}
@@ -270,26 +256,6 @@ function getDisplayErrorMessage(tickerError: unknown, chainError: unknown): stri
 
 function formatUsdAmount(value: number | null): string {
   return value == null ? "--" : `$${value.toLocaleString()}`;
-}
-
-function StatusPill({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4 shadow-lg shadow-black/10">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-slate-400">
-        {icon}
-        {label}
-      </div>
-      <p className="mt-3 text-base font-semibold text-white">{value}</p>
-    </div>
-  );
 }
 
 function TopRecommendationPanel({

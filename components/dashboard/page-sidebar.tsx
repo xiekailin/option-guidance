@@ -22,26 +22,29 @@ export { navItems };
 
 export function PageSidebar({ activeTab, onTabChange }: { activeTab: TabKey; onTabChange: (tab: TabKey) => void }) {
   return (
-    <aside className="hidden w-56 shrink-0 xl:block">
-      <nav className="sticky top-8 space-y-1">
-        {navItems.map((item) => {
-          const isActive = item.key === activeTab;
-          return (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => onTabChange(item.key)}
-              className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                isActive
-                  ? "border border-cyan-400/20 bg-cyan-400/10 text-cyan-200"
-                  : "text-slate-400 hover:border-white/10 hover:bg-white/5 hover:text-slate-200"
-              }`}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          );
-        })}
+    <aside className="hidden w-52 shrink-0 xl:block">
+      <nav className="sticky top-6 rounded-2xl border border-white/8 bg-white/[0.03] p-3 backdrop-blur">
+        <p className="mb-3 px-3 text-[11px] font-medium uppercase tracking-widest text-slate-500">功能导航</p>
+        <div className="space-y-0.5">
+          {navItems.map((item) => {
+            const isActive = item.key === activeTab;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => onTabChange(item.key)}
+                className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition ${
+                  isActive
+                    ? "bg-cyan-400/15 text-cyan-200 font-medium"
+                    : "text-slate-500 hover:bg-white/5 hover:text-slate-300"
+                }`}
+              >
+                <span className={isActive ? "text-cyan-400" : ""}>{item.icon}</span>
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
       </nav>
     </aside>
   );
@@ -49,7 +52,7 @@ export function PageSidebar({ activeTab, onTabChange }: { activeTab: TabKey; onT
 
 export function PageTabs({ activeTab, onTabChange }: { activeTab: TabKey; onTabChange: (tab: TabKey) => void }) {
   return (
-    <nav className="flex gap-1 overflow-x-auto pb-2 xl:hidden">
+    <nav className="flex gap-1.5 overflow-x-auto xl:hidden">
       {navItems.map((item) => {
         const isActive = item.key === activeTab;
         return (
@@ -57,10 +60,10 @@ export function PageTabs({ activeTab, onTabChange }: { activeTab: TabKey; onTabC
             key={item.key}
             type="button"
             onClick={() => onTabChange(item.key)}
-            className={`flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-xs font-medium transition ${
+            className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium transition ${
               isActive
-                ? "border-cyan-400/20 bg-cyan-400/10 text-cyan-200"
-                : "border-white/10 text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                ? "bg-cyan-400/15 text-cyan-200"
+                : "text-slate-500 hover:bg-white/5 hover:text-slate-300"
             }`}
           >
             {item.icon}

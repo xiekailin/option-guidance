@@ -70,19 +70,19 @@ export function RecommendationSummary({
       ];
 
   return (
-    <section className="grid gap-4 lg:grid-cols-4">
+    <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((card) => (
         <article
           key={card.label}
-          className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl shadow-slate-950/20 backdrop-blur"
+          className="rounded-2xl border border-white/8 bg-white/[0.03] p-4 backdrop-blur"
         >
-          <p className="text-sm text-slate-400">{card.label}</p>
-          <p className="mt-3 text-2xl font-semibold text-white">{card.value}</p>
-          <p className="mt-2 text-xs leading-5 text-slate-400">{card.hint}</p>
+          <p className="text-xs text-slate-500">{card.label}</p>
+          <p className="mt-1.5 text-xl font-bold text-white">{card.value}</p>
+          <p className="mt-1 text-[11px] text-slate-500">{card.hint}</p>
         </article>
       ))}
       {updatedAt ? (
-        <p className="text-xs text-slate-500 lg:col-span-4">数据更新时间：{new Date(updatedAt).toLocaleString()}</p>
+        <p className="text-[11px] text-slate-600 sm:col-span-2 lg:col-span-4">更新于 {new Date(updatedAt).toLocaleString()}</p>
       ) : null}
     </section>
   );
