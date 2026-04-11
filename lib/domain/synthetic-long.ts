@@ -121,20 +121,20 @@ export function getSyntheticLongMethodology(
   return {
     filters: [
       {
-        label: "腿部方向",
-        description: "只组合买入 call + 卖出 put，不和现有收租策略混在一起。",
+        label: "合约方向",
+        description: "只组合买看涨 + 卖看跌，不和现有收租策略混在一起。",
       },
       {
         label: "到期一致",
-        description: "call 与 put 必须同到期，避免把不同时间价值硬拼成一组。",
+        description: "看涨与看跌必须同到期，避免把不同剩余时间的价值硬拼成一组。",
       },
       {
         label: "执行价接近",
-        description: "两条腿执行价差控制在约 3% 内，尽量接近合成现货而不是变成杂糅组合。",
+        description: "两个合约执行价差控制在约 3% 内，尽量接近模拟持有 BTC 而不是变成杂糅组合。",
       },
       {
-        label: "Delta 窗口",
-        description: `call 和 put 的 Delta 绝对值都优先落在 ${roundTo(deltaRange.min * 100, 0)}% - ${roundTo(deltaRange.max * 100, 0)}%。`,
+        label: "触发概率窗口",
+        description: `看涨和看跌的触发概率绝对值都优先落在 ${roundTo(deltaRange.min * 100, 0)}% - ${roundTo(deltaRange.max * 100, 0)}%。`,
       },
       {
         label: "周期匹配",
@@ -142,16 +142,16 @@ export function getSyntheticLongMethodology(
       },
     ],
     scoring: [
-      { label: "Delta 对称度", weightPercent: 30, description: "call / put 的 Delta 越接近目标区间，方向暴露越干净。" },
+      { label: "触发概率对称度", weightPercent: 30, description: "看涨 / 看跌的触发概率越接近目标区间，方向风险越干净。" },
       { label: "周期匹配", weightPercent: 18, description: "离你想做的周度/月度节奏越近越好。" },
-      { label: "净权利金接近 0", weightPercent: 24, description: "优先卖 put 收到的权利金尽量覆盖买 call 成本。" },
-      { label: "上下腿缓冲", weightPercent: 18, description: "既看 call 的上方杠杆空间，也看 put 的下方接货缓冲。" },
-      { label: "流动性", weightPercent: 10, description: "两条腿都要有足够盘口深度，避免纸面组合无法成交。" },
+      { label: "净权利金接近 0", weightPercent: 24, description: "优先卖看跌收到的权利金尽量覆盖买看涨成本。" },
+      { label: "两个合约缓冲", weightPercent: 18, description: "既看看涨的上方杠杆空间，也看看跌的下方跌价保护空间。" },
+      { label: "市场买卖活跃度", weightPercent: 10, description: "两个合约都要有足够市场买卖活跃度，避免纸面组合无法成交。" },
     ],
     notes: [
       "净权利金接近 0 只是入场成本接近 0，不代表无风险。",
-      "这类组合本质是强看涨表达，下跌尾部风险主要来自 short put。",
-      "如果 BTC 暴跌，亏损会远大于单纯买 call，并可能带来保证金压力。",
+      "这类组合本质是强烈看涨的组合，暴跌时的风险主要来自卖看跌。",
+      "如果 BTC 暴跌，亏损会远大于单纯买看涨，并可能带来追加押金压力。",
     ],
   };
 }
@@ -205,45 +205,45 @@ function buildSyntheticSummary(pair: SyntheticLongPair): string {
         ? `净收 $${pair.netPremiumUsdPerMinContract.toLocaleString()}`
         : `净付 $${Math.abs(pair.netPremiumUsdPerMinContract).toLocaleString()}`;
 
-  return `买入 ${pair.call.strike.toLocaleString()} call，同时卖出 ${pair.put.strike.toLocaleString()} put；${balanceText}，更接近强看涨的合成现货表达，而不是稳定收租。`;
+  return `买看涨 ${pair.call.strike.toLocaleString()}，同时卖看跌 ${pair.put.strike.toLocaleString()}；${balanceText}，更接近强烈看涨的模拟持有 BTC 组合，而不是稳定收租。`;
 }
 
 function buildSyntheticReasons(pair: SyntheticLongPair, input: RecommendationInput): string[] {
   const reasons = [
     `${pair.expiration} 到期，剩余 ${pair.daysToExpiry} 天，符合你的${input.cycle === "weekly" ? "周度" : "月度"}节奏。`,
-    `买入 call 的 Delta 约 ${Math.abs(pair.call.delta ?? 0).toFixed(3)}，卖出 put 的 Delta 约 ${Math.abs(pair.put.delta ?? 0).toFixed(3)}，方向暴露更接近对称。`,
+    `买看涨的触发概率约 ${Math.abs(pair.call.delta ?? 0).toFixed(3)}，卖看跌的触发概率约 ${Math.abs(pair.put.delta ?? 0).toFixed(3)}，方向风险更接近对称。`,
     pair.netPremiumUsdPerMinContract == null
-      ? "当前净权利金无法精确估算，但两条腿仍满足方向与周期筛选。"
-      : `每 0.1 BTC 组合净权利金约 ${pair.netPremiumUsdPerMinContract >= 0 ? `+$${pair.netPremiumUsdPerMinContract.toLocaleString()}` : `-$${Math.abs(pair.netPremiumUsdPerMinContract).toLocaleString()}` }，更接近用 put 权利金覆盖 call 成本。`,
+      ? "当前净权利金无法精确估算，但两个合约仍满足方向与周期筛选。"
+      : `每 0.1 BTC 组合净权利金约 ${pair.netPremiumUsdPerMinContract >= 0 ? `+$${pair.netPremiumUsdPerMinContract.toLocaleString()}` : `-$${Math.abs(pair.netPremiumUsdPerMinContract).toLocaleString()}` }，更接近用看跌权利金覆盖看涨成本。`,
   ];
 
-  reasons.push(`卖 put 的执行价在现价下方约 ${pair.put.otmPercent ?? 0}% ，仍保留一定接货缓冲。`);
+  reasons.push(`卖看跌的执行价在现价下方约 ${pair.put.otmPercent ?? 0}% ，仍保留一定跌价保护空间。`);
   return reasons;
 }
 
 function buildSyntheticRisks(pair: SyntheticLongPair): string[] {
   return [
-    "这不是免费持有 call，而是用 short put 的下跌义务去换取接近零成本的看涨敞口。",
-    `如果 BTC 暴跌，卖出的 put 可能让你按 $${pair.put.strike.toLocaleString()} 接货，单组名义义务约 $${pair.downsideObligationUsd.toLocaleString()}。`,
-    "如果账户使用保证金而不是完全现金担保，波动放大时会有额外追保压力。",
+    "这不是免费持有看涨，而是用卖看跌的下跌义务去换取接近零成本的看涨仓位。",
+    `如果 BTC 暴跌，卖出的看跌可能让你按 $${pair.put.strike.toLocaleString()} 被迫按约定价买入 BTC，单组需要承担的金额约 $${pair.downsideObligationUsd.toLocaleString()}。`,
+    "如果账户使用押金而不是全额现金，波动放大时会有额外追加押金压力。",
   ];
 }
 
 function buildSyntheticTags(pair: SyntheticLongPair): string[] {
   return [
-    `买 Call ${pair.call.strike.toLocaleString()}`,
-    `卖 Put ${pair.put.strike.toLocaleString()}`,
+    `买看涨 ${pair.call.strike.toLocaleString()}`,
+    `卖看跌 ${pair.put.strike.toLocaleString()}`,
     `净权利金 ${pair.netPremiumUsdPerMinContract == null ? "--" : `$${pair.netPremiumUsdPerMinContract.toLocaleString()}`}`,
     `周期 ${pair.daysToExpiry}天`,
-    `OI ${pair.call.openInterest}/${pair.put.openInterest}`,
+    `持仓量 ${pair.call.openInterest}/${pair.put.openInterest}`,
   ];
 }
 
 function buildSyntheticUnsuitableScenarios(pair: SyntheticLongPair): string[] {
   return [
     "如果你要的是稳定收租而不是方向性强看涨，这种组合不适合你。",
-    "如果你无法接受 BTC 大跌时按卖出 put 的执行价接货，这种组合不适合你。",
-    `如果你无法承受约 $${pair.downsideObligationUsd.toLocaleString()} 每组的名义下跌义务，也不适合你。`,
+    "如果你无法接受 BTC 大跌时按卖出看跌的执行价被迫按约定价买入 BTC，这种组合不适合你。",
+    `如果你无法承受约 $${pair.downsideObligationUsd.toLocaleString()} 每组的需要承担的金额，也不适合你。`,
   ];
 }
 
@@ -281,7 +281,7 @@ function buildSyntheticExpiryPayoff(pair: SyntheticLongPair, minContractSize: nu
 
     scenarios.push({
       title: `BTC ${label}（~$${priceAtExpiry.toLocaleString()}）`,
-      description: pct > 0 ? "call 赚钱，put 归零。" : "put 亏钱，call 归零。",
+      description: pct > 0 ? "看涨赚钱，看跌过期不值钱。" : "看跌亏钱，看涨过期不值钱。",
       amountUsd: roundTo(payoff, 2),
     });
   }

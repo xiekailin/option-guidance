@@ -95,7 +95,7 @@ export function OptionsDashboard() {
                 实时期权指导网页
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-                输入你的 BTC 仓位、可用资金、周期偏好和风险承受力，页面会实时拉取 BTC 价格与 Deribit 期权链，给出 Covered Call、Cash-Secured Put，或合成现货 / 看涨风险逆转组合建议。
+                输入你的 BTC 仓位、可用资金、周期偏好和风险承受力，页面会实时拉取 BTC 价格与 Deribit 期权链，给出三种策略建议：持有 BTC 卖看涨赚租金、卖看跌准备低价买入 BTC、或者用买卖期权组合模拟持有 BTC。
               </p>
             </div>
 
@@ -243,22 +243,22 @@ export function OptionsDashboard() {
 function getStrategyModeLabel(strategy: RecommendationInput["strategy"]): string {
   switch (strategy) {
     case "cash-secured-put":
-      return "Cash-Secured Put";
+      return "卖看跌准备接货 (Cash-Secured Put)";
     case "synthetic-long":
-      return "Synthetic Long";
+      return "模拟持有 BTC (Synthetic Long)";
     case "covered-call":
     default:
-      return "Covered Call";
+      return "持有 BTC 卖看涨 (Covered Call)";
   }
 }
 
 function getDisplayErrorMessage(tickerError: unknown, chainError: unknown): string {
   if (tickerError && chainError) {
-    return "行情和期权链暂时都没有加载成功，请稍后刷新再试。";
+    return "行情和期权数据暂时都没有加载成功，请稍后刷新再试。";
   }
 
   if (chainError) {
-    return "期权链暂时没有加载成功，请稍后刷新再试。";
+    return "期权数据暂时没有加载成功，请稍后刷新再试。";
   }
 
   if (tickerError) {
@@ -302,7 +302,7 @@ function TopRecommendationPanel({
   if (!recommendation) {
     return (
       <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-sm leading-7 text-slate-400">
-        暂时没有满足你条件的候选。你可以降低最低权利金门槛，或者把周度/保守切到月度/平衡试试。
+        暂时没有满足你条件的候选。你可以降低最低租金门槛，或者把周度/保守切到月度/平衡试试。
       </div>
     );
   }
@@ -316,16 +316,16 @@ function TopRecommendationPanel({
           <p className="mt-3 text-sm leading-7 text-cyan-50/90">{recommendation.summary}</p>
           <p className="mt-3 text-xs leading-6 text-cyan-100/80">
             {strategy === "covered-call"
-              ? "这不是单纯按租金最高排序，而是在 Delta、周期、租金和上行留白之间找平衡。"
-              : "这不是单纯按租金最高排序，而是在 Delta、周期、租金和接货缓冲之间找平衡。"}
+              ? "不是只看谁租金最高，而是综合触发概率、到期时间、租金和上涨空间来挑选最合适的。"
+              : "不是只看谁租金最高，而是综合触发概率、到期时间、租金和跌价保护来挑选最合适的。"}
           </p>
         </div>
         <div className="grid gap-3 rounded-3xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-200 sm:grid-cols-2 md:min-w-[360px]">
           <MiniMetric label="评分" value={`${recommendation.score}`} />
-          <MiniMetric label="Delta" value={`${Math.abs(recommendation.contract.delta ?? 0).toFixed(3)}`} />
+          <MiniMetric label="触发概率" value={`${Math.abs(recommendation.contract.delta ?? 0).toFixed(3)}`} />
           <MiniMetric label="单张租金" value={formatUsdAmount(recommendation.premiumPerMinContractUsd)} />
           <MiniMetric
-            label={strategy === "covered-call" ? "上行留白" : "接货缓冲"}
+            label={strategy === "covered-call" ? "上涨空间" : "跌价保护"}
             value={`${recommendation.contract.otmPercent}%`}
           />
         </div>
@@ -363,7 +363,7 @@ function TopSyntheticPanel({ recommendation }: { recommendation: SyntheticLongRe
   if (!recommendation) {
     return (
       <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-sm leading-7 text-slate-400">
-        暂时没有满足你条件的合成现货组合。你可以放宽周期、调整风险偏好，或者增加可用现金后再试。
+        暂时没有满足你条件的模拟持有 BTC 组合。你可以放宽周期、调整风险偏好，或者增加可用现金后再试。
       </div>
     );
   }
@@ -378,7 +378,7 @@ function TopSyntheticPanel({ recommendation }: { recommendation: SyntheticLongRe
           </h2>
           <p className="mt-3 text-sm leading-7 text-fuchsia-50/90">{recommendation.summary}</p>
           <p className="mt-3 text-xs leading-6 text-fuchsia-100/80">
-            这不是稳定收租，而是用 short put 义务去换取更接近零成本的看涨敞口。
+            这不是稳定收租，而是用卖看跌赚的钱去补买看涨的成本，接近零成本但风险不小。
           </p>
         </div>
         <div className="grid gap-3 rounded-3xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-200 sm:grid-cols-2 md:min-w-[360px]">
@@ -427,9 +427,9 @@ function ResultInterpretationPanel({
       <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
         <p className="text-sm font-medium text-white">推荐表怎么读</p>
         <div className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
-          <ReadingHint label="Delta" description="越高代表越贴近实值，租金通常更厚，但被行权/接货概率也更高。" />
-          <ReadingHint label="OTM" description="看你离执行价还有多少缓冲；covered call 看上行留白，put 看接货折价。" />
-          <ReadingHint label="年化" description="只是横向比较效率，不代表你每期都能稳定滚出这个复利。" />
+          <ReadingHint label="触发概率" description="越接近 1 说明越容易被触发执行，租金通常更厚，但风险也更大。" />
+          <ReadingHint label="距触发价距离" description="看你离约定价格还有多远：卖看涨看上涨空间，卖看跌看跌价保护。" />
+          <ReadingHint label="折算年收益" description="只是把单期租金按时间折算成年收益，方便比较，不代表每年都能稳定赚到这个数。" />
           <ReadingHint label="单张租金" description="这里统一按 0.1 BTC/张折算，方便你估算真实能收多少。" />
         </div>
       </article>
@@ -437,7 +437,7 @@ function ResultInterpretationPanel({
       <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
         <p className="text-sm font-medium text-white">为什么不是只看权利金最高</p>
         <p className="mt-4 text-sm leading-7 text-slate-300">
-          {recommendation?.summary ?? "模型会先过滤方向、Delta、周期和最低权利金，再做加权评分。权利金只是其中一个维度。"}
+          {recommendation?.summary ?? "模型会先按方向、触发概率、到期时间和最低租金筛选，再做综合打分。租金只是其中一个维度。"}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {methodology.scoring.map((item) => (
@@ -478,17 +478,17 @@ function SyntheticInterpretationPanel({
       <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
         <p className="text-sm font-medium text-white">这张组合怎么读</p>
         <div className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
-          <ReadingHint label="买 Call" description="给你上涨杠杆；涨得越多，long call 的收益越明显。" />
-          <ReadingHint label="卖 Put" description="用 short put 收的权利金去补买 call 的成本，但下跌义务也来自这里。" />
+          <ReadingHint label="买看涨期权" description="放大上涨收益；BTC 涨得越多，买的看涨期权赚得越多。" />
+          <ReadingHint label="卖看跌期权" description="用卖看跌赚的租金去付买看涨的成本，但跌的时候风险也来自这里。" />
           <ReadingHint label="净权利金" description="越接近 0 越像零成本入场，但这不代表没有风险。" />
-          <ReadingHint label="下跌义务" description="卖出 put 让你在暴跌时承受接货或保证金压力。" />
+          <ReadingHint label="下跌义务" description="卖出的看跌期权让你在暴跌时被迫按约定价买入，还要额外准备押金。" />
         </div>
       </article>
 
       <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
         <p className="text-sm font-medium text-white">为什么不是免费持有期权</p>
         <p className="mt-4 text-sm leading-7 text-slate-300">
-          {recommendation?.summary ?? "你只是把买 call 的成本转移给了卖 put 的下跌义务。入场净成本接近 0，不等于尾部风险消失。"}
+          {recommendation?.summary ?? "你只是把买看涨的成本转移给了卖看跌的下跌风险。入场净成本接近 0，不等于极端行情的风险消失。"}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {methodology.scoring.map((item) => (
@@ -511,7 +511,7 @@ function MethodologyPanel({ methodology }: { methodology: StandardMethodology })
       <div className="max-w-3xl">
         <p className="text-sm font-medium text-white">算法说明</p>
         <p className="mt-3 text-sm leading-7 text-slate-300">
-          这套推荐不是黑箱 AI，而是先按规则过滤，再按加权评分排序。你可以直接看到过滤口径、权重和模型边界。
+          这套推荐不是什么看不懂的 AI，而是先按规则筛选，再按综合打分排序。你可以直接看到筛选条件、权重和模型边界。
         </p>
       </div>
 
@@ -529,7 +529,7 @@ function MethodologyPanel({ methodology }: { methodology: StandardMethodology })
         </div>
 
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">第二步：对剩余候选做加权评分</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">第二步：对剩余候选做综合打分</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {methodology.scoring.map((item) => (
               <article key={item.label} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
@@ -564,7 +564,7 @@ function SyntheticMethodologyPanel({ methodology }: { methodology: SyntheticMeth
       <div className="max-w-3xl">
         <p className="text-sm font-medium text-white">组合算法说明</p>
         <p className="mt-3 text-sm leading-7 text-slate-300">
-          这套组合不是在单腿里挑租金最高，而是在同到期买 call / 卖 put 之间找更接近合成现货的强看涨结构。
+          这套组合不是在单腿里挑租金最高，而是在同一到期日里，找买看涨和卖看跌能组合出接近模拟持有 BTC 的方案。
         </p>
       </div>
 
@@ -615,7 +615,7 @@ function SyntheticRecommendationList({ recommendations }: { recommendations: Syn
   if (recommendations.length === 0) {
     return (
       <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-center text-sm leading-7 text-slate-400">
-        当前条件下没有找到合适的合成现货组合。你可以放宽周期、调高风险偏好，或增加可用现金后再试。
+        当前条件下没有找到合适的模拟持有 BTC 组合。你可以放宽周期、调高风险偏好，或增加可用现金后再试。
       </div>
     );
   }
@@ -636,7 +636,7 @@ function SyntheticRecommendationList({ recommendations }: { recommendations: Syn
               <MiniMetric label="净权利金" value={formatUsdAmount(item.pair.netPremiumUsdPerMinContract)} />
               <MiniMetric label="到期" value={item.pair.expiration} />
               <MiniMetric label="最大张数" value={`${item.maxLots}`} />
-              <MiniMetric label="下跌义务" value={`$${item.pair.downsideObligationUsd.toLocaleString()}`} />
+              <MiniMetric label="最大跌价损失" value={`$${item.pair.downsideObligationUsd.toLocaleString()}`} />
             </div>
           </div>
 
@@ -756,7 +756,7 @@ function ExpiryPayoffCard({ payoff }: { payoff: ExpiryPayoff }) {
         <p className="mt-4 text-xs text-emerald-100/80">
           盈亏平衡价约 ${payoff.breakEvenPrice.toLocaleString()}
           {payoff.estimatedMonthlyUsd != null ? (
-            <span className="ml-2">（假设每期都不被行权，持续滚仓）</span>
+            <span className="ml-2">（假设每期合约都不被触发，持续做下一期）</span>
           ) : null}
         </p>
       ) : null}
@@ -776,7 +776,7 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
 function LoadingPanel() {
   return (
     <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-sm text-slate-300">
-      正在拉取 BTC 价格和期权链，请稍等。
+      正在拉取 BTC 价格和期权数据，请稍等。
     </div>
   );
 }
@@ -797,20 +797,20 @@ function RiskPanel({ strategy }: { strategy: RecommendationInput["strategy"] }) 
   const items =
     strategy === "covered-call"
       ? [
-          "covered call 的核心代价不是亏损无限，而是 BTC 大涨时上涨收益会被封顶。",
-          "越短周期的合约，theta 收得更快，但临近到期的价格跳动也更敏感。",
-          "标记价不等于真实成交价，流动性低的合约要特别注意盘口价差。",
+          "持有 BTC 卖看涨的核心代价不是亏损无限，而是 BTC 大涨时你的上涨收益会被封顶。",
+          "越短周期的合约，时间衰减带来的租金收得更快，但临近到期的价格跳动也更敏感。",
+          "参考价不等于真实成交价，流动性低的合约要特别注意买卖价差。",
         ]
       : strategy === "cash-secured-put"
         ? [
-            "cash-secured put 的核心风险是 BTC 大跌时，你会在执行价被动接入现货。",
-            "低 Delta 只能降低被接货概率，不代表你不会接货。",
-            "高隐波确实让权利金更肥，但通常也意味着市场预期接下来波动更大。",
+            "卖看跌准备接货的核心风险是 BTC 大跌时，你会在约定价被迫按约定价买入 BTC。",
+            "低触发概率只能降低被迫接货的可能性，不代表你不会接货。",
+            "高波动率预期确实让租金更厚，但通常也意味着市场预期接下来波动更大。",
           ]
         : [
-            "synthetic long / risk reversal 不是稳定收租，而是方向性极强的看涨表达。",
-            "暴跌时风险主要来自 short put，下跌尾部会明显重于单纯买 call。",
-            "如果账户不是全现金担保，还要额外考虑保证金波动和追保压力。",
+            "模拟持有 BTC 的组合不是稳定收租，而是强烈看涨的操作。",
+            "暴跌时风险主要来自卖出的看跌期权，下跌时的亏损会明显大于只买看涨期权。",
+            "如果账户不是全现金担保，还要额外考虑押金波动和追加押金的压力。",
           ];
 
   return (

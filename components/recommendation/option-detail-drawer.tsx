@@ -58,16 +58,16 @@ export function OptionDetailDrawer({ recommendation, onClose }: OptionDetailDraw
           <MetricCard label="执行价" value={`$${recommendation.contract.strike.toLocaleString()}`} />
           <MetricCard label="到期" value={recommendation.contract.expiration} />
           <MetricCard label="剩余天数" value={`${recommendation.contract.daysToExpiry} 天`} />
-          <MetricCard label="Delta" value={`${Math.abs(recommendation.contract.delta ?? 0).toFixed(3)}`} />
+          <MetricCard label="触发概率" value={`${Math.abs(recommendation.contract.delta ?? 0).toFixed(3)}`} />
           <MetricCard label="权利金 / 张" value={formatUsdAmount(recommendation.premiumPerMinContractUsd)} />
-          <MetricCard label="年化粗略" value={`${recommendation.contract.annualizedYieldPercent ?? "--"}%`} />
+          <MetricCard label="折算年收益（粗略）" value={`${recommendation.contract.annualizedYieldPercent ?? "--"}%`} />
           <MetricCard label="可开最大张数" value={`${recommendation.maxLots} 张`} />
           <MetricCard label="可覆盖数量" value={`${recommendation.maxTradeAmountBtc} BTC`} />
         </div>
 
         {recommendation.effectiveBuyCostPerBtc != null ? (
           <div className="mt-6 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
-            <p className="text-sm font-medium text-emerald-200">等效接货成本</p>
+            <p className="text-sm font-medium text-emerald-200">实际买入成本</p>
             <p className="mt-2 text-xl font-semibold text-white">
               ${recommendation.effectiveBuyCostPerBtc.toLocaleString()}/BTC
             </p>
@@ -155,7 +155,7 @@ export function OptionDetailDrawer({ recommendation, onClose }: OptionDetailDraw
               <p className="mt-4 text-sm text-emerald-100/80">
                 盈亏平衡价约 ${recommendation.expiryPayoff.breakEvenPrice.toLocaleString()}
                 {recommendation.expiryPayoff.estimatedMonthlyUsd != null ? (
-                  <span className="ml-2">（假设每期不被行权，持续滚仓）</span>
+                  <span className="ml-2">（假设每期都不被触发，持续做下一期）</span>
                 ) : null}
               </p>
             ) : null}

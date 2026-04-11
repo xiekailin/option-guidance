@@ -80,7 +80,7 @@ export function PayoffCalculator({
 
           {manualMode ? (
             <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <SelectField label="期权类型" value={manualOptionType} onChange={(v) => setManualOptionType(v as "call" | "put")} options={[{ value: "call", label: "Call" }, { value: "put", label: "Put" }]} />
+              <SelectField label="期权类型" value={manualOptionType} onChange={(v) => setManualOptionType(v as "call" | "put")} options={[{ value: "call", label: "看涨（Call）" }, { value: "put", label: "看跌（Put）" }]} />
               <NumberField label="执行价 ($)" value={manualStrike} step="1000" onChange={setManualStrike} />
               <NumberField label="权利金 (BTC)" value={manualPremium} step="0.001" onChange={setManualPremium} />
               <NumberField label="BTC 现价 ($)" value={manualUnderlying} step="100" onChange={setManualUnderlying} />

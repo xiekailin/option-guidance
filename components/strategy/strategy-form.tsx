@@ -9,9 +9,9 @@ interface StrategyFormProps {
 }
 
 const riskOptions = [
-  { value: "conservative", label: "保守", hint: "优先更低 Delta 和更远执行价" },
+  { value: "conservative", label: "保守", hint: "优先选更不容易被触发的、约定价格更远的" },
   { value: "balanced", label: "平衡", hint: "在租金和安全边际之间折中" },
-  { value: "aggressive", label: "进取", hint: "追求更厚权利金，但更容易被行权" },
+  { value: "aggressive", label: "进取", hint: "追求更厚的租金，但更容易被触发执行" },
 ] as const;
 
 export function StrategyForm({ input, onChange }: StrategyFormProps) {
@@ -26,8 +26,8 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
         <h2 className="mt-2 text-2xl font-semibold text-white">生成个性化期权建议</h2>
         <p className="mt-2 text-sm leading-6 text-slate-300">
           {isSyntheticMode
-            ? "页面会根据你的周期偏好、可用现金和风险偏好，实时筛出更适合的买 call + 卖 put 强看涨组合。"
-            : "页面会根据你的持仓、可用资金、周期偏好和风险偏好，实时筛出更适合的 Covered Call 或 Cash-Secured Put。"}
+            ? "页面会根据你的周期偏好、可用现金和风险偏好，实时筛出更适合的买看涨 + 卖看跌，强烈看涨的组合。"
+            : "页面会根据你的持仓、可用资金、周期偏好和风险偏好，实时筛出更适合的持有 BTC 卖看涨，或卖看跌准备接货。"}
         </p>
       </div>
 
@@ -37,20 +37,20 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
           <div className="grid gap-3 md:grid-cols-3">
             <ToggleButton
               active={input.strategy === "covered-call"}
-              title="Covered Call"
+              title="持有 BTC 卖看涨（Covered Call）"
               description="适合已经持有 BTC 的收租"
               onClick={() => onChange({ ...input, strategy: "covered-call" })}
             />
             <ToggleButton
               active={input.strategy === "cash-secured-put"}
-              title="Cash-Secured Put"
+              title="卖看跌准备接货（Cash-Secured Put）"
               description="适合愿意低位接货的收租"
               onClick={() => onChange({ ...input, strategy: "cash-secured-put", acceptAssignment: true })}
             />
             <ToggleButton
               active={input.strategy === "synthetic-long"}
-              title="Synthetic Long"
-              description="买 call + 卖 put 的强看涨组合"
+              title="模拟持有 BTC（Synthetic Long）"
+              description="买看涨 + 卖看跌的强烈看涨组合"
               onClick={() => onChange({ ...input, strategy: "synthetic-long", acceptAssignment: true })}
             />
           </div>
@@ -83,7 +83,7 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
             <StaticInfoField
               label="净权利金目标"
               value="尽量接近 0"
-              hint="模型会优先找卖 put 权利金大致覆盖买 call 成本的组合，但这不代表无风险。"
+              hint="模型会优先找卖看跌赚的钱能覆盖买看涨成本的组合，但这不代表无风险。"
             />
           )}
         </div>
@@ -104,17 +104,17 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
             <StaticInfoField
               label="接受被动接货"
               value="默认接受"
-              hint="Cash-secured put 的前提就是愿意在执行价接货；低 Delta 只能降低概率，不会取消这项义务。"
+              hint="卖看跌的前提就是你愿意在约定价格买入 BTC；低触发概率只能降低被触发的可能，不会取消这项义务。"
             />
           ) : isSyntheticMode ? (
             <StaticInfoField
               label="下跌义务"
               value="必须接受"
-              hint="这个策略的核心风险来自卖 put；即使买了 call，也不能抵消暴跌时的接货或保证金压力。"
+              hint="这个策略的核心风险来自卖出的看跌期权；即使买了看涨，也不能抵消暴跌时被迫买入和追加押金的压力。"
             />
           ) : (
             <SelectField
-              label="接受被行权卖出"
+              label="接受 BTC 被按约定价卖出"
               value={String(input.acceptAssignment)}
               options={[
                 { value: "true", label: "接受" },
@@ -160,7 +160,7 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
             <ul className="mt-2 space-y-1">
               <li>- 这是方向性强看涨组合，不是稳定收租。</li>
               <li>- &ldquo;净权利金接近 0&rdquo; 只是入场成本接近 0，不代表没有尾部风险。</li>
-              <li>- 暴跌时风险主要来自 short put，而不是 long call。</li>
+              <li>- 暴跌时风险主要来自卖出的看跌期权，而不是买入的看涨。</li>
             </ul>
           </div>
         ) : null}

@@ -31,7 +31,7 @@ export function VolatilityPanel({ options, underlyingPrice }: VolatilityPanelPro
           <Activity className="size-5 text-cyan-300" />
           <div>
             <h2 className="text-xl font-semibold text-white">波动率分析</h2>
-            <p className="mt-1 text-xs text-slate-400">隐含波动率是权利金贵不贵的核心指标</p>
+            <p className="mt-1 text-xs text-slate-400">波动率预期告诉你现在的权利金是贵还是便宜</p>
           </div>
         </div>
 
@@ -44,15 +44,15 @@ export function VolatilityPanel({ options, underlyingPrice }: VolatilityPanelPro
             {/* ATM IV 大数字 */}
             <div className="mt-5 flex flex-wrap items-end gap-6">
               <div>
-                <p className="text-xs text-slate-400">ATM 隐波（平值隐含波动率）</p>
+                <p className="text-xs text-slate-400">当前价附近的波动率预期</p>
                 <p className="mt-2 text-4xl font-bold text-white">{analysis.atmLabel}</p>
-                <p className="mt-1 text-xs text-slate-400">BTC 现价附近的期权市场预期的年化波动幅度</p>
+                <p className="mt-1 text-xs text-slate-400">市场觉得 BTC 未来一年会波动多大</p>
               </div>
               <span className={`rounded-full border px-3 py-1 text-sm font-medium ${ivLevelStyles[analysis.ivLevel].bg}`}>
                 {ivLevelStyles[analysis.ivLevel].label}
               </span>
               <div className="text-xs text-slate-400">
-                <p>全部合约 IV 范围：{analysis.ivMin}% — {analysis.ivMax}%</p>
+                <p>全部合约的波动率预期范围：{analysis.ivMin}% — {analysis.ivMax}%</p>
                 <p>中位数：{analysis.ivMedian}%</p>
               </div>
             </div>
@@ -65,8 +65,8 @@ export function VolatilityPanel({ options, underlyingPrice }: VolatilityPanelPro
             {/* 期限结构 */}
             {analysis.termStructure.length > 0 && (
               <div className="mt-5">
-                <p className="text-sm font-medium text-white">期限结构 — 隐波随到期日怎么变</p>
-                <p className="mt-1 text-xs text-slate-400">看不同到期日的 ATM 隐波，判断短期还是长期的期权更&ldquo;值钱&rdquo;</p>
+                <p className="text-sm font-medium text-white">不同到期日的波动率变化</p>
+                <p className="mt-1 text-xs text-slate-400">看不同到期日的波动率预期，判断短期还是长期的期权更贵</p>
                 <TermStructureChart points={analysis.termStructure} />
               </div>
             )}
@@ -74,8 +74,8 @@ export function VolatilityPanel({ options, underlyingPrice }: VolatilityPanelPro
             {/* IV Skew */}
             {analysis.skew.length > 0 && (
               <div className="mt-5">
-                <p className="text-sm font-medium text-white">波动率偏斜 — 不同执行价的隐波差异</p>
-                <p className="mt-1 text-xs text-slate-400">看虚值 put 和虚值 call 的隐波差，偏斜越大说明市场越恐慌</p>
+                <p className="text-sm font-medium text-white">看跌和看涨之间的波动率差异</p>
+                <p className="mt-1 text-xs text-slate-400">看跌期权的波动率预期比看涨高多少，差得越多说明市场越害怕跌</p>
                 <SkewChart points={analysis.skew} />
               </div>
             )}
@@ -84,10 +84,10 @@ export function VolatilityPanel({ options, underlyingPrice }: VolatilityPanelPro
             <div className="mt-5 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-7 text-amber-50/95">
               <p className="font-medium text-amber-200">怎么看这些数据</p>
               <ul className="mt-2 space-y-1">
-                <li>- <strong>ATM 隐波</strong>就是市场觉得 BTC 一年内的波动幅度。50% 意味着市场认为 BTC 有 50% 概率在当前价 ±50% 的范围内波动。</li>
-                <li>- <strong>偏高</strong>说明权利金贵，适合卖方收租；<strong>偏低</strong>说明权利金便宜，适合买方建仓。</li>
-                <li>- <strong>期限结构</strong>如果远期隐波高于近期，说明市场预期未来波动会加大（通常是对的）。</li>
-                <li>- <strong>偏斜</strong>如果虚值 put 的隐波明显高于虚值 call，说明市场愿意花更多钱&ldquo;买保险&rdquo;，是恐慌信号。</li>
+                <li>- <strong>当前价附近的波动率预期</strong>就是市场觉得 BTC 未来一年会波动多大。比如 50% 意味着市场认为 BTC 大概率在当前价上下 50% 的范围内波动。</li>
+                <li>- <strong>偏高</strong>说明权利金贵，适合卖出方收租；<strong>偏低</strong>说明权利金便宜，适合买入方买入。</li>
+                <li>- <strong>不同到期日的波动率变化</strong>如果远期的波动率预期高于近期，说明市场觉得未来会越来越不稳定。</li>
+                <li>- <strong>看跌和看涨之间的波动率差异</strong>如果看跌期权的波动率预期明显比看涨高很多，说明大家更害怕跌，愿意多花钱买保险。</li>
               </ul>
             </div>
           </>
@@ -162,8 +162,8 @@ function SkewChart({ points }: { points: VolatilityAnalysis["skew"] }) {
         const [x, y] = p.split(",").map(Number);
         return <circle key={`p-${i}`} cx={x} cy={y} r="3" fill="rgb(251 113 133)" />;
       })}
-      <text x={padding.left + 4} y={padding.top + 4} fill="rgb(34 211 238)" fontSize="10" fontFamily="sans-serif">● Call</text>
-      <text x={padding.left + 60} y={padding.top + 4} fill="rgb(251 113 133)" fontSize="10" fontFamily="sans-serif">● Put</text>
+      <text x={padding.left + 4} y={padding.top + 4} fill="rgb(34 211 238)" fontSize="10" fontFamily="sans-serif">● 看涨</text>
+      <text x={padding.left + 60} y={padding.top + 4} fill="rgb(251 113 133)" fontSize="10" fontFamily="sans-serif">● 看跌</text>
       <text x={padding.left} y={height - 8} textAnchor="start" fill="rgb(148 163 184)" fontSize="10" fontFamily="sans-serif">
         {Math.round(minStrike).toLocaleString()}
       </text>

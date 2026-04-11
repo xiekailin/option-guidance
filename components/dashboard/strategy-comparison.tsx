@@ -35,9 +35,9 @@ export function StrategyComparison({
     : null;
 
   const columns = [
-    { key: "covered-call" as const, label: "Covered Call", subtitle: "持有 BTC 卖 Call", data: coveredCallData, color: "cyan" as const },
-    { key: "cash-secured-put" as const, label: "Cash-Secured Put", subtitle: "卖 Put 准备接货", data: cspData, color: "cyan" as const },
-    { key: "synthetic-long" as const, label: "Synthetic Long", subtitle: "买 Call + 卖 Put", data: syntheticData, color: "fuchsia" as const },
+    { key: "covered-call" as const, label: "持有 BTC 卖看涨（Covered Call）", subtitle: "持有 BTC 卖看涨", data: coveredCallData, color: "cyan" as const },
+    { key: "cash-secured-put" as const, label: "卖看跌准备接货（Cash-Secured Put）", subtitle: "卖看跌准备接货", data: cspData, color: "cyan" as const },
+    { key: "synthetic-long" as const, label: "模拟持有 BTC（Synthetic Long）", subtitle: "买看涨 + 卖看跌", data: syntheticData, color: "fuchsia" as const },
   ];
 
   const borderColor = { cyan: "border-cyan-400/20 bg-cyan-400/5", fuchsia: "border-fuchsia-400/20 bg-fuchsia-400/5" };
@@ -85,10 +85,10 @@ export function StrategyComparison({
         <div className="mt-5 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-7 text-amber-50/95">
           <p className="font-medium text-amber-200">怎么选</p>
           <ul className="mt-2 space-y-1">
-            <li>- <strong>看涨但想赚租金</strong> → Covered Call，赚权利金但涨幅被封顶。</li>
-            <li>- <strong>想低价接 BTC</strong> → Cash-Secured Put，赚权利金，跌了按折扣价接货。</li>
-            <li>- <strong>强烈看涨不怕跌</strong> → Synthetic Long，接近零成本获得看涨敞口，但暴跌风险很大。</li>
-            <li>- 没有哪种策略绝对好，关键是看你对行情的判断和你能承受的风险。</li>
+            <li>- <strong>看涨但想赚租金</strong> → 持有 BTC 卖看涨，赚权利金但涨太多你就卖飞了。</li>
+            <li>- <strong>想低价接 BTC</strong> → 卖看跌准备接货，先赚一笔权利金，真跌了就按折扣价买入 BTC。</li>
+            <li>- <strong>强烈看涨不怕跌</strong> → 模拟持有 BTC，几乎不花钱就能跟涨，但暴跌时亏得很惨。</li>
+            <li>- 没有哪种策略绝对好，关键是看你觉得 BTC 会涨还是跌，以及你能承受多大的亏损。</li>
           </ul>
         </div>
       </div>
@@ -134,7 +134,7 @@ function buildStrategyMetrics(
       breakEvenText: `$${Math.round(breakEven).toLocaleString()}`,
       breakEvenHint: `BTC 跌到这个价格，你的权利金刚好抵消 BTC 下跌`,
       capitalText: `${availableBtc} BTC ≈ $${Math.round(capitalBtc).toLocaleString()}`,
-      capitalHint: `你拿来做 covered call 的 BTC 的市值`,
+      capitalHint: `你拿来做持有 BTC 卖看涨的 BTC 的市值`,
       riskNature: "涨幅被封顶",
       riskLabel: "稳健",
     };
@@ -163,14 +163,14 @@ function buildSyntheticMetrics(rec: SyntheticLongRecommendation, spot: number): 
 
   return {
     maxProfitText: "理论上无限",
-    maxProfitHint: `BTC 涨得越多，long call 赚得越多`,
+    maxProfitHint: `BTC 涨得越多，买的看涨期权赚得越多`,
     maxLossText: `$${rec.pair.downsideObligationUsd.toLocaleString()}+`,
-    maxLossHint: `BTC 大跌时，short put 让你按 $${putStrike.toLocaleString()} 接货`,
+    maxLossHint: `BTC 大跌时，卖的看跌期权让你按 $${putStrike.toLocaleString()} 接货`,
     breakEvenText: `≈ $${Math.round(spot).toLocaleString()}`,
     breakEvenHint: `因为净权利金接近 0，盈亏平衡价约等于现价`,
-    capitalText: `保证金（按需）`,
-    capitalHint: `不需要全额现金，但暴跌时保证金会飙升`,
-    riskNature: "双边风险",
+    capitalText: `押金（按需）`,
+    capitalHint: `不需要全额现金，但暴跌时押金会飙升`,
+    riskNature: "涨跌都有风险",
     riskLabel: "激进",
   };
 }

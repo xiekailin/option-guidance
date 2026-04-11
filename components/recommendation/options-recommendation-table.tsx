@@ -34,10 +34,10 @@ export function OptionsRecommendationTable({
               <th className="px-5 py-4">合约</th>
               <th className="px-5 py-4">执行价</th>
               <th className="px-5 py-4">到期 / 天数</th>
-              <th className="px-5 py-4">Delta</th>
-              <th className="px-5 py-4">OTM</th>
+              <th className="px-5 py-4">触发概率</th>
+              <th className="px-5 py-4">距触发距离</th>
               <th className="px-5 py-4">单张租金</th>
-              <th className="px-5 py-4">年化</th>
+              <th className="px-5 py-4">折算年收益</th>
               <th className="px-5 py-4">等级</th>
               <th className="px-5 py-4">操作</th>
             </tr>
