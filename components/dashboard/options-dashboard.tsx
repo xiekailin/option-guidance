@@ -10,6 +10,7 @@ import { StrategyForm } from "@/components/strategy/strategy-form";
 import { PayoffCalculator } from "@/components/dashboard/payoff-calculator";
 import { StrategyComparison } from "@/components/dashboard/strategy-comparison";
 import { VolatilityPanel } from "@/components/dashboard/volatility-panel";
+import { PageSidebar, PageTabs, type TabKey } from "@/components/dashboard/page-sidebar";
 import { buildRecommendations, getRecommendationMethodology } from "@/lib/domain/recommendation";
 import {
   buildSyntheticLongRecommendations,
@@ -34,45 +35,13 @@ const defaultInput: RecommendationInput = {
   minPremiumPercent: 0.4,
 };
 
-const navItems = [
-  {
-    href: "#strategy-input",
-    title: "策略输入",
-    description: "先设定仓位、周期、风险偏好",
-  },
-  {
-    href: "#top-pick",
-    title: "首选建议",
-    description: "看为什么这张合约排第一",
-  },
-  {
-    href: "#recommendation-list",
-    title: "推荐列表",
-    description: "读表前先看筛选和排序逻辑",
-  },
-  {
-    href: "#calculator",
-    title: "损益计算器",
-    description: "看到期时不同价格下赚多少",
-  },
-  {
-    href: "#volatility",
-    title: "波动率分析",
-    description: "隐波高低、期限结构和偏斜",
-  },
-  {
-    href: "#algorithm",
-    title: "算法说明",
-    description: "看过滤规则、评分维度和边界",
-  },
-] as const;
-
 type StandardMethodology = ReturnType<typeof getRecommendationMethodology>;
 type SyntheticMethodology = ReturnType<typeof getSyntheticLongMethodology>;
 
 export function OptionsDashboard() {
   const [input, setInput] = useState<RecommendationInput>(defaultInput);
   const [selected, setSelected] = useState<Recommendation | null>(null);
+  const [activeTab, setActiveTab] = useState<TabKey>("recommendations");
 
   const {
     data: ticker,
@@ -114,7 +83,7 @@ export function OptionsDashboard() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#12385a_0%,#07111d_32%,#020617_70%)] text-slate-100">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
         <header className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/65 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl">
           <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
@@ -170,81 +139,97 @@ export function OptionsDashboard() {
           updatedAt={chain?.updatedAt ?? ticker?.updatedAt}
         />
 
-        <PageNav />
+        <PageTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-        <div className="grid gap-8 xl:grid-cols-[420px_minmax(0,1fr)]">
-          <section id="strategy-input" className="scroll-mt-24">
-            <StrategyForm input={input} onChange={setInput} />
-          </section>
+        <div className="flex gap-8">
+          <PageSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
-          <section className="space-y-6">
-            <section id="top-pick" className="scroll-mt-24">
-              {isSyntheticMode ? (
-                <TopSyntheticPanel recommendation={topSyntheticRecommendation} />
-              ) : (
-                <TopRecommendationPanel recommendation={topRecommendation} strategy={input.strategy} />
-              )}
-            </section>
+          <div className="min-w-0 flex-1 space-y-6">
+            {activeTab === "recommendations" && (
+              <div className="grid gap-8 xl:grid-cols-[380px_minmax(0,1fr)]">
+                <section>
+                  <StrategyForm input={input} onChange={setInput} />
+                </section>
 
-            <section id="recommendation-list" className="scroll-mt-24 space-y-6">
-              {isSyntheticMode ? (
-                <SyntheticInterpretationPanel
-                  methodology={syntheticMethodology}
-                  recommendation={topSyntheticRecommendation}
-                />
-              ) : (
-                <ResultInterpretationPanel
-                  methodology={standardMethodology}
-                  recommendation={topRecommendation}
-                />
-              )}
+                <section className="space-y-6">
+                  <section>
+                    {isSyntheticMode ? (
+                      <TopSyntheticPanel recommendation={topSyntheticRecommendation} />
+                    ) : (
+                      <TopRecommendationPanel recommendation={topRecommendation} strategy={input.strategy} />
+                    )}
+                  </section>
 
-              {hasError ? (
-                <ErrorPanel message={getDisplayErrorMessage(tickerError, chainError)} />
-              ) : isLoading ? (
-                <LoadingPanel />
-              ) : inputErrors.length > 0 ? (
-                <ErrorPanel title="输入需要修正" message={inputErrors.join(" ")} />
-              ) : isSyntheticMode ? (
-                <SyntheticRecommendationList recommendations={syntheticRecommendations} />
-              ) : (
-                <OptionsRecommendationTable
-                  recommendations={standardRecommendations}
-                  onSelect={(recommendation) => setSelected(recommendation)}
-                />
-              )}
-            </section>
+                  <section className="space-y-6">
+                    {isSyntheticMode ? (
+                      <SyntheticInterpretationPanel
+                        methodology={syntheticMethodology}
+                        recommendation={topSyntheticRecommendation}
+                      />
+                    ) : (
+                      <ResultInterpretationPanel
+                        methodology={standardMethodology}
+                        recommendation={topRecommendation}
+                      />
+                    )}
 
-            <section id="algorithm" className="scroll-mt-24">
-              {isSyntheticMode ? (
-                <SyntheticMethodologyPanel methodology={syntheticMethodology} />
-              ) : (
-                <MethodologyPanel methodology={standardMethodology} />
-              )}
-            </section>
+                    {hasError ? (
+                      <ErrorPanel message={getDisplayErrorMessage(tickerError, chainError)} />
+                    ) : isLoading ? (
+                      <LoadingPanel />
+                    ) : inputErrors.length > 0 ? (
+                      <ErrorPanel title="输入需要修正" message={inputErrors.join(" ")} />
+                    ) : isSyntheticMode ? (
+                      <SyntheticRecommendationList recommendations={syntheticRecommendations} />
+                    ) : (
+                      <OptionsRecommendationTable
+                        recommendations={standardRecommendations}
+                        onSelect={(recommendation) => setSelected(recommendation)}
+                      />
+                    )}
+                  </section>
 
-            <StrategyComparison
-              strategy={input.strategy}
-              underlyingPrice={ticker?.price}
-              recommendation={topRecommendation}
-              syntheticRecommendation={topSyntheticRecommendation}
-              availableBtc={input.availableBtc}
-              availableCashUsd={input.availableCashUsd}
-            />
+                  <section>
+                    {isSyntheticMode ? (
+                      <SyntheticMethodologyPanel methodology={syntheticMethodology} />
+                    ) : (
+                      <MethodologyPanel methodology={standardMethodology} />
+                    )}
+                  </section>
+                </section>
+              </div>
+            )}
 
-            <PayoffCalculator
-              selectedContract={selected?.contract ?? null}
-              syntheticPut={isSyntheticMode ? topSyntheticRecommendation?.pair.put : undefined}
-              underlyingPrice={ticker?.price}
-              strategy={input.strategy}
-              availableBtc={input.availableBtc}
-              availableCashUsd={input.availableCashUsd}
-            />
+            {activeTab === "calculator" && (
+              <PayoffCalculator
+                selectedContract={selected?.contract ?? null}
+                syntheticPut={isSyntheticMode ? topSyntheticRecommendation?.pair.put : undefined}
+                underlyingPrice={ticker?.price}
+                strategy={input.strategy}
+                availableBtc={input.availableBtc}
+                availableCashUsd={input.availableCashUsd}
+              />
+            )}
 
-            <VolatilityPanel options={chain?.options ?? []} underlyingPrice={ticker?.price} />
+            {activeTab === "comparison" && (
+              <StrategyComparison
+                strategy={input.strategy}
+                underlyingPrice={ticker?.price}
+                recommendation={topRecommendation}
+                syntheticRecommendation={topSyntheticRecommendation}
+                availableBtc={input.availableBtc}
+                availableCashUsd={input.availableCashUsd}
+              />
+            )}
 
-            <RiskPanel strategy={input.strategy} />
-          </section>
+            {activeTab === "volatility" && (
+              <VolatilityPanel options={chain?.options ?? []} underlyingPrice={ticker?.price} />
+            )}
+
+            {activeTab === "risk" && (
+              <RiskPanel strategy={input.strategy} />
+            )}
+          </div>
         </div>
       </div>
 
@@ -265,23 +250,6 @@ function getStrategyModeLabel(strategy: RecommendationInput["strategy"]): string
     default:
       return "Covered Call";
   }
-}
-
-function PageNav() {
-  return (
-    <nav className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {navItems.map((item) => (
-        <a
-          key={item.href}
-          href={item.href}
-          className="rounded-3xl border border-white/10 bg-white/5 px-5 py-4 transition hover:border-cyan-400/40 hover:bg-cyan-400/10"
-        >
-          <p className="text-sm font-medium text-white">{item.title}</p>
-          <p className="mt-2 text-xs leading-6 text-slate-400">{item.description}</p>
-        </a>
-      ))}
-    </nav>
-  );
 }
 
 function getDisplayErrorMessage(tickerError: unknown, chainError: unknown): string {
