@@ -144,3 +144,52 @@ export interface Recommendation {
   assignmentText: string;
   expiryPayoff: ExpiryPayoff;
 }
+
+// --- Payoff Calculator ---
+
+export interface PayoffPoint {
+  priceAtExpiry: number;
+  pnl: number;
+}
+
+export interface PayoffLeg {
+  direction: "long" | "short";
+  optionType: "call" | "put";
+  strike: number;
+  premium: number;
+  contractSize: number;
+}
+
+export interface PayoffCurve {
+  points: PayoffPoint[];
+  maxProfit: number;
+  maxLoss: number;
+  breakEvenPrice: number | null;
+}
+
+// --- Volatility Analysis ---
+
+export interface TermStructurePoint {
+  label: string;
+  daysToExpiry: number;
+  iv: number;
+}
+
+export interface SkewPoint {
+  strike: number;
+  optionType: "call" | "put";
+  otmPercent: number;
+  iv: number;
+}
+
+export interface VolatilityAnalysis {
+  atmIv: number | null;
+  atmLabel: string;
+  ivLevel: "high" | "normal" | "low";
+  termStructure: TermStructurePoint[];
+  skew: SkewPoint[];
+  ivMin: number;
+  ivMax: number;
+  ivMedian: number;
+  summary: string;
+}

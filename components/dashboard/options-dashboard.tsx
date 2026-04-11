@@ -7,6 +7,9 @@ import { RecommendationSummary } from "@/components/dashboard/recommendation-sum
 import { OptionDetailDrawer } from "@/components/recommendation/option-detail-drawer";
 import { OptionsRecommendationTable } from "@/components/recommendation/options-recommendation-table";
 import { StrategyForm } from "@/components/strategy/strategy-form";
+import { PayoffCalculator } from "@/components/dashboard/payoff-calculator";
+import { StrategyComparison } from "@/components/dashboard/strategy-comparison";
+import { VolatilityPanel } from "@/components/dashboard/volatility-panel";
 import { buildRecommendations, getRecommendationMethodology } from "@/lib/domain/recommendation";
 import {
   buildSyntheticLongRecommendations,
@@ -46,6 +49,16 @@ const navItems = [
     href: "#recommendation-list",
     title: "推荐列表",
     description: "读表前先看筛选和排序逻辑",
+  },
+  {
+    href: "#calculator",
+    title: "损益计算器",
+    description: "看到期时不同价格下赚多少",
+  },
+  {
+    href: "#volatility",
+    title: "波动率分析",
+    description: "隐波高低、期限结构和偏斜",
   },
   {
     href: "#algorithm",
@@ -209,6 +222,26 @@ export function OptionsDashboard() {
                 <MethodologyPanel methodology={standardMethodology} />
               )}
             </section>
+
+            <StrategyComparison
+              strategy={input.strategy}
+              underlyingPrice={ticker?.price}
+              recommendation={topRecommendation}
+              syntheticRecommendation={topSyntheticRecommendation}
+              availableBtc={input.availableBtc}
+              availableCashUsd={input.availableCashUsd}
+            />
+
+            <PayoffCalculator
+              selectedContract={selected?.contract ?? null}
+              syntheticPut={isSyntheticMode ? topSyntheticRecommendation?.pair.put : undefined}
+              underlyingPrice={ticker?.price}
+              strategy={input.strategy}
+              availableBtc={input.availableBtc}
+              availableCashUsd={input.availableCashUsd}
+            />
+
+            <VolatilityPanel options={chain?.options ?? []} underlyingPrice={ticker?.price} />
 
             <RiskPanel strategy={input.strategy} />
           </section>
