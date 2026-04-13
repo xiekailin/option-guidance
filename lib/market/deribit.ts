@@ -5,7 +5,7 @@ import {
   calculatePremiumUsdPerBtc,
   roundTo,
 } from "../domain/calculations";
-import type { OptionContract } from "../types/option";
+import type { HistoricalPricePoint, OptionContract } from "../types/option";
 
 const DERIBIT_API_BASE = "https://www.deribit.com/api/v2/public";
 
@@ -26,6 +26,8 @@ interface DeribitResult<T> {
 interface DeribitTickerResult {
   index_price: number;
 }
+
+type DeribitIndexChartPoint = [number, number];
 
 interface DeribitBookSummary {
   instrument_name: string;
@@ -104,6 +106,18 @@ export async function fetchOptionChain(): Promise<OptionContract[]> {
     .map(normalizeDeribitOption)
     .filter((option): option is OptionContract => option !== null)
     .sort((left, right) => left.expirationTimestamp - right.expirationTimestamp || left.strike - right.strike);
+}
+
+export async function fetchBtcHistoricalPrices(): Promise<HistoricalPricePoint[]> {
+  const result = await fetchDeribitJson<DeribitIndexChartPoint[]>("/get_index_chart_data?index_name=btc_usd&range=1y");
+  if (!Array.isArray(result)) {
+    throw new DeribitApiError("UPSTREAM_INVALID_PAYLOAD", "Deribit historical price payload is invalid");
+  }
+
+  return result
+    .filter((item): item is DeribitIndexChartPoint => Array.isArray(item) && item.length >= 2)
+    .map(([timestamp, price]) => ({ timestamp, price: roundTo(price, 2) }))
+    .filter((point) => Number.isFinite(point.timestamp) && Number.isFinite(point.price));
 }
 
 function normalizeDeribitOption(summary: DeribitBookSummary): OptionContract | null {

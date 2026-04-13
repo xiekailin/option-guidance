@@ -17,7 +17,7 @@ import {
   buildSyntheticLongRecommendations,
   getSyntheticLongMethodology,
 } from "@/lib/domain/synthetic-long";
-import { fetchBtcTicker, fetchOptionsChain } from "@/lib/market/deribit-client";
+import { fetchBtcHistoricalSeries, fetchBtcTicker, fetchOptionsChain } from "@/lib/market/deribit-client";
 import { validateRecommendationInput } from "@/lib/domain/calculations";
 import type {
   ExpiryPayoff,
@@ -63,6 +63,15 @@ export function OptionsDashboard() {
     mutate: refreshChain,
   } = useSWR("options-chain", fetchOptionsChain, {
     refreshInterval: 20_000,
+    revalidateOnFocus: false,
+  });
+
+  const {
+    data: historicalSeries,
+    error: historicalError,
+    isLoading: historicalLoading,
+  } = useSWR("btc-historical-series", fetchBtcHistoricalSeries, {
+    refreshInterval: 60 * 60 * 1000,
     revalidateOnFocus: false,
   });
 
@@ -235,7 +244,13 @@ export function OptionsDashboard() {
             )}
 
             {activeTab === "volatility" && (
-              <VolatilityPanel options={chain?.options ?? []} underlyingPrice={ticker?.price} />
+              <VolatilityPanel
+                options={chain?.options ?? []}
+                underlyingPrice={ticker?.price}
+                historicalPrices={historicalSeries?.points ?? []}
+                historicalLoading={historicalLoading}
+                historicalError={Boolean(historicalError)}
+              />
             )}
 
             {activeTab === "risk" && (

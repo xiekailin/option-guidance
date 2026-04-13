@@ -1,9 +1,10 @@
 import { roundTo } from "./calculations";
-import type { OptionContract, SkewPoint, TermStructurePoint, VolatilityAnalysis } from "../types/option";
+import type { HistoricalPricePoint, OptionContract, SkewPoint, TermStructurePoint, VolatilityAnalysis } from "../types/option";
 
 export function analyzeVolatility(
   options: OptionContract[],
   underlyingPrice: number | null,
+  historicalPrices: HistoricalPricePoint[] = [],
 ): VolatilityAnalysis {
   if (!underlyingPrice || options.length === 0) {
     return emptyAnalysis();
@@ -21,9 +22,15 @@ export function analyzeVolatility(
   const ivMin = Math.min(...ivValues);
   const ivMax = Math.max(...ivValues);
   const ivMedian = roundTo(median(ivValues), 1);
+  const dailyHistoricalPrices = toDailyCloses(historicalPrices);
+  const historicalVol7d = calculateHistoricalVolatility(dailyHistoricalPrices, 7);
+  const historicalVol30d = calculateHistoricalVolatility(dailyHistoricalPrices, 30);
+  const historicalVol90d = calculateHistoricalVolatility(dailyHistoricalPrices, 90);
+  const ivHvSpread30d = atmIv != null && historicalVol30d != null ? roundTo(atmIv - historicalVol30d, 1) : null;
 
   const ivLevel = getIvLevel(atmIv, ivMin, ivMax);
-  const summary = buildSummary(atmIv, ivLevel, ivMedian);
+  const verdict = buildVerdict(atmIv, historicalVol30d, ivHvSpread30d);
+  const summary = buildSummary(atmIv, ivLevel, ivMedian, historicalVol30d, ivHvSpread30d);
 
   return {
     atmIv: atmIv != null ? roundTo(atmIv, 1) : null,
@@ -34,6 +41,11 @@ export function analyzeVolatility(
     ivMin: roundTo(ivMin, 1),
     ivMax: roundTo(ivMax, 1),
     ivMedian,
+    historicalVol7d,
+    historicalVol30d,
+    historicalVol90d,
+    ivHvSpread30d,
+    verdict,
     summary,
   };
 }
@@ -48,6 +60,11 @@ function emptyAnalysis(): VolatilityAnalysis {
     ivMin: 0,
     ivMax: 0,
     ivMedian: 0,
+    historicalVol7d: null,
+    historicalVol30d: null,
+    historicalVol90d: null,
+    ivHvSpread30d: null,
+    verdict: "暂无足够数据。",
     summary: "暂无足够的隐波数据。",
   };
 }
@@ -145,20 +162,85 @@ function getIvLevel(atmIv: number | null, ivMin: number, ivMax: number): "high" 
   return "normal";
 }
 
+function toDailyCloses(points: HistoricalPricePoint[]): HistoricalPricePoint[] {
+  const byDay = new Map<string, HistoricalPricePoint>();
+
+  for (const point of points) {
+    const day = new Date(point.timestamp).toISOString().slice(0, 10);
+    const previous = byDay.get(day);
+    if (!previous || point.timestamp > previous.timestamp) {
+      byDay.set(day, point);
+    }
+  }
+
+  return Array.from(byDay.values()).sort((a, b) => a.timestamp - b.timestamp);
+}
+
+function calculateHistoricalVolatility(points: HistoricalPricePoint[], windowDays: number): number | null {
+  if (points.length < windowDays + 1) {
+    return null;
+  }
+
+  const closes = points.slice(-windowDays - 1).map((point) => point.price).filter((price) => price > 0);
+  if (closes.length < windowDays + 1) {
+    return null;
+  }
+
+  const returns: number[] = [];
+  for (let i = 1; i < closes.length; i += 1) {
+    returns.push(Math.log(closes[i]! / closes[i - 1]!));
+  }
+
+  if (returns.length === 0) {
+    return null;
+  }
+
+  const avg = returns.reduce((sum, value) => sum + value, 0) / returns.length;
+  const variance = returns.reduce((sum, value) => sum + ((value - avg) ** 2), 0) / returns.length;
+  const dailyStd = Math.sqrt(variance);
+  return roundTo(dailyStd * Math.sqrt(365) * 100, 1);
+}
+
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  return sorted.length % 2 !== 0 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
 }
 
-function buildSummary(atmIv: number | null, level: "high" | "normal" | "low", ivMedian: number): string {
+function buildVerdict(atmIv: number | null, historicalVol30d: number | null, spread30d: number | null): string {
+  if (atmIv == null || historicalVol30d == null || spread30d == null) {
+    return "现在只能看到隐含波动率，历史对比还不够完整。";
+  }
+
+  if (spread30d >= 8) {
+    return "现在期权偏贵，收租卖方更舒服。";
+  }
+
+  if (spread30d <= -5) {
+    return "现在期权不算贵，买方更容易拿到便宜价格。";
+  }
+
+  return "现在期权价格大体正常，没有明显贵很多或便宜很多。";
+}
+
+function buildSummary(
+  atmIv: number | null,
+  level: "high" | "normal" | "low",
+  ivMedian: number,
+  historicalVol30d: number | null,
+  spread30d: number | null,
+): string {
   if (atmIv == null) return "暂无足够的隐波数据。";
 
   const levelText = level === "high"
-    ? "隐波偏高，权利金比较贵，适合卖方收租。"
+    ? "隐含波动率偏高，权利金通常更贵。"
     : level === "low"
-      ? "隐波偏低，权利金比较便宜，适合买方建仓。"
-      : "隐波处于中等水平，权利金定价合理。";
+      ? "隐含波动率偏低，权利金通常更便宜。"
+      : "隐含波动率处于中间位置。";
 
-  return `ATM 隐波 ${roundTo(atmIv, 1)}%，全部合约中位数 ${ivMedian}%。${levelText}`;
+  if (historicalVol30d == null || spread30d == null) {
+    return `当前隐含波动率 ${roundTo(atmIv, 1)}%，全部合约中位数 ${ivMedian}%。${levelText}`;
+  }
+
+  return `当前隐含波动率 ${roundTo(atmIv, 1)}%，30天历史波动率 ${historicalVol30d}%，两者相差 ${spread30d >= 0 ? "+" : ""}${spread30d}%。${levelText}`;
 }

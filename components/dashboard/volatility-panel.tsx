@@ -3,11 +3,14 @@
 import { useMemo } from "react";
 import { Activity } from "lucide-react";
 import { analyzeVolatility } from "@/lib/domain/volatility";
-import type { OptionContract, VolatilityAnalysis } from "@/lib/types/option";
+import type { HistoricalPricePoint, OptionContract, VolatilityAnalysis } from "@/lib/types/option";
 
 interface VolatilityPanelProps {
   options: OptionContract[];
   underlyingPrice: number | undefined;
+  historicalPrices: HistoricalPricePoint[];
+  historicalLoading: boolean;
+  historicalError: boolean;
 }
 
 const ivLevelStyles = {
@@ -16,10 +19,16 @@ const ivLevelStyles = {
   low: { bg: "bg-emerald-400/15 text-emerald-200 border-emerald-400/20", label: "偏低" },
 };
 
-export function VolatilityPanel({ options, underlyingPrice }: VolatilityPanelProps) {
+export function VolatilityPanel({
+  options,
+  underlyingPrice,
+  historicalPrices,
+  historicalLoading,
+  historicalError,
+}: VolatilityPanelProps) {
   const analysis: VolatilityAnalysis = useMemo(
-    () => analyzeVolatility(options ?? [], underlyingPrice ?? null),
-    [options, underlyingPrice],
+    () => analyzeVolatility(options ?? [], underlyingPrice ?? null, historicalPrices ?? []),
+    [options, underlyingPrice, historicalPrices],
   );
 
   const hasData = analysis.atmIv != null;
@@ -41,25 +50,48 @@ export function VolatilityPanel({ options, underlyingPrice }: VolatilityPanelPro
           </div>
         ) : (
           <>
-            {/* ATM IV 大数字 */}
-            <div className="mt-5 flex flex-wrap items-end gap-6">
-              <div>
-                <p className="text-xs text-slate-400">当前价附近的波动率预期</p>
-                <p className="mt-2 text-4xl font-bold text-white">{analysis.atmLabel}</p>
-                <p className="mt-1 text-xs text-slate-400">市场觉得 BTC 未来一年会波动多大</p>
-              </div>
-              <span className={`rounded-full border px-3 py-1 text-sm font-medium ${ivLevelStyles[analysis.ivLevel].bg}`}>
-                {ivLevelStyles[analysis.ivLevel].label}
-              </span>
-              <div className="text-xs text-slate-400">
-                <p>全部合约的波动率预期范围：{analysis.ivMin}% — {analysis.ivMax}%</p>
-                <p>中位数：{analysis.ivMedian}%</p>
-              </div>
+            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              <MetricCard
+                label="当前隐含波动率"
+                value={analysis.atmLabel}
+                hint="期权市场现在给的价格温度"
+                badge={ivLevelStyles[analysis.ivLevel].label}
+                badgeClassName={ivLevelStyles[analysis.ivLevel].bg}
+              />
+              <MetricCard
+                label="7天历史波动率"
+                value={formatPercent(analysis.historicalVol7d)}
+                hint="最近一周 BTC 真实波动有多大"
+              />
+              <MetricCard
+                label="30天历史波动率"
+                value={formatPercent(analysis.historicalVol30d)}
+                hint="最近一个月 BTC 真实波动有多大"
+              />
+              <MetricCard
+                label="90天历史波动率"
+                value={formatPercent(analysis.historicalVol90d)}
+                hint="最近三个月 BTC 真实波动有多大"
+              />
+              <MetricCard
+                label="IV - 30天HV"
+                value={formatSpread(analysis.ivHvSpread30d)}
+                hint="正数越大，通常说明期权越贵"
+              />
             </div>
 
-            {/* 一句话判断 */}
-            <div className="mt-4 rounded-2xl border border-white/8 bg-slate-950/40 p-4 text-sm leading-7 text-slate-200">
-              {analysis.summary}
+            <div className="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4">
+              <p className="text-sm font-medium text-cyan-100">一句话判断</p>
+              <p className="mt-2 text-base font-semibold text-white">{analysis.verdict}</p>
+              <p className="mt-2 text-sm leading-7 text-cyan-50/90">{analysis.summary}</p>
+              <p className="mt-2 text-xs text-cyan-100/70">全部合约范围 {analysis.ivMin}% — {analysis.ivMax}%，中位数 {analysis.ivMedian}%</p>
+              {historicalError ? (
+                <p className="mt-2 text-xs text-amber-200">历史波动率加载失败，下面先只参考隐含波动率。</p>
+              ) : historicalLoading ? (
+                <p className="mt-2 text-xs text-cyan-100/70">历史波动率还在加载中。</p>
+              ) : analysis.historicalVol30d == null ? (
+                <p className="mt-2 text-xs text-cyan-100/70">历史价格数据还不够，暂时算不出完整的历史波动率。</p>
+              ) : null}
             </div>
 
             {/* 期限结构 */}
@@ -80,20 +112,53 @@ export function VolatilityPanel({ options, underlyingPrice }: VolatilityPanelPro
               </div>
             )}
 
-            {/* 解释 */}
             <div className="mt-5 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-7 text-amber-50/95">
               <p className="font-medium text-amber-200">怎么看这些数据</p>
               <ul className="mt-2 space-y-1">
-                <li>- <strong>当前价附近的波动率预期</strong>就是市场觉得 BTC 未来一年会波动多大。比如 50% 意味着市场认为 BTC 大概率在当前价上下 50% 的范围内波动。</li>
-                <li>- <strong>偏高</strong>说明权利金贵，适合卖出方收租；<strong>偏低</strong>说明权利金便宜，适合买入方买入。</li>
-                <li>- <strong>不同到期日的波动率变化</strong>如果远期的波动率预期高于近期，说明市场觉得未来会越来越不稳定。</li>
-                <li>- <strong>看跌和看涨之间的波动率差异</strong>如果看跌期权的波动率预期明显比看涨高很多，说明大家更害怕跌，愿意多花钱买保险。</li>
+                <li>- <strong>隐含波动率（IV）</strong>是期权市场现在报出来的贵不贵。</li>
+                <li>- <strong>历史波动率（HV）</strong>是 BTC 最近真实波动有多大。</li>
+                <li>- <strong>IV 比 HV 高很多</strong>，通常说明期权偏贵，卖方收租更舒服。</li>
+                <li>- <strong>IV 比 HV 低很多</strong>，通常说明期权不贵，买方更容易拿到便宜价格。</li>
+                <li>- <strong>波动率突然拉高</strong>，权利金通常也会一起变贵，但也往往代表市场更紧张，别只看租金高就冲进去。</li>
               </ul>
             </div>
           </>
         )}
       </div>
     </section>
+  );
+}
+
+function formatPercent(value: number | null): string {
+  return value == null ? "--" : `${value}%`;
+}
+
+function formatSpread(value: number | null): string {
+  return value == null ? "--" : `${value >= 0 ? "+" : ""}${value}%`;
+}
+
+function MetricCard({
+  label,
+  value,
+  hint,
+  badge,
+  badgeClassName,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  badge?: string;
+  badgeClassName?: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-xs text-slate-400">{label}</p>
+        {badge ? <span className={`rounded-full border px-2 py-0.5 text-[11px] ${badgeClassName}`}>{badge}</span> : null}
+      </div>
+      <p className="mt-2 text-2xl font-bold text-white">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-slate-400">{hint}</p>
+    </div>
   );
 }
 

@@ -1,5 +1,5 @@
-import { fetchBtcIndexPrice, fetchOptionChain } from "./deribit";
-import type { MarketTickerResponse, OptionsChainResponse } from "../types/option";
+import { fetchBtcHistoricalPrices, fetchBtcIndexPrice, fetchOptionChain } from "./deribit";
+import type { HistoricalPricePoint, MarketTickerResponse, OptionsChainResponse } from "../types/option";
 
 export async function fetchBtcTicker(): Promise<MarketTickerResponse> {
   const price = await fetchBtcIndexPrice();
@@ -16,5 +16,18 @@ export async function fetchOptionsChain(): Promise<OptionsChainResponse> {
     source: "Deribit public API",
     updatedAt: new Date().toISOString(),
     options,
+  };
+}
+
+export async function fetchBtcHistoricalSeries(): Promise<{
+  points: HistoricalPricePoint[];
+  source: string;
+  updatedAt: string;
+}> {
+  const points = await fetchBtcHistoricalPrices();
+  return {
+    points,
+    source: "Deribit public API",
+    updatedAt: new Date().toISOString(),
   };
 }

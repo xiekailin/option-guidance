@@ -57,6 +57,11 @@ export interface MarketTickerResponse {
   updatedAt: string;
 }
 
+export interface HistoricalPricePoint {
+  timestamp: number;
+  price: number;
+}
+
 export interface OptionContract {
   instrumentName: string;
   optionType: "call" | "put";
@@ -191,5 +196,10 @@ export interface VolatilityAnalysis {
   ivMin: number;
   ivMax: number;
   ivMedian: number;
+  historicalVol7d: number | null;
+  historicalVol30d: number | null;
+  historicalVol90d: number | null;
+  ivHvSpread30d: number | null;
+  verdict: string;
   summary: string;
 }
