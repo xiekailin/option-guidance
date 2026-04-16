@@ -33,23 +33,26 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
 
       <div className="grid gap-4">
         <div>
-          <label className="mb-2 block text-sm font-medium text-slate-200">策略类型</label>
-          <div className="grid gap-3 md:grid-cols-3">
+          <label className="mb-3 block text-sm font-medium text-slate-200">策略类型</label>
+          <div className="space-y-2">
             <ToggleButton
               active={input.strategy === "covered-call"}
-              title="持有 BTC 卖看涨（Covered Call）"
+              title="持有 BTC 卖看涨"
+              subtitle="Covered Call"
               description="适合已经持有 BTC 的收租"
               onClick={() => onChange({ ...input, strategy: "covered-call" })}
             />
             <ToggleButton
               active={input.strategy === "cash-secured-put"}
-              title="卖看跌准备接货（Cash-Secured Put）"
+              title="卖看跌准备接货"
+              subtitle="Cash-Secured Put"
               description="适合愿意低位接货的收租"
               onClick={() => onChange({ ...input, strategy: "cash-secured-put", acceptAssignment: true })}
             />
             <ToggleButton
               active={input.strategy === "synthetic-long"}
-              title="模拟持有 BTC（Synthetic Long）"
+              title="模拟持有 BTC"
+              subtitle="Synthetic Long"
               description="买看涨 + 卖看跌的强烈看涨组合"
               onClick={() => onChange({ ...input, strategy: "synthetic-long", acceptAssignment: true })}
             />
@@ -183,11 +186,13 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
 function ToggleButton({
   active,
   title,
+  subtitle,
   description,
   onClick,
 }: {
   active: boolean;
   title: string;
+  subtitle?: string;
   description: string;
   onClick: () => void;
 }) {
@@ -201,7 +206,10 @@ function ToggleButton({
           : "border-white/10 bg-slate-900/60 text-slate-300 hover:border-cyan-400/60"
       }`}
     >
-      <div className="font-medium">{title}</div>
+      <div className="flex items-baseline gap-2">
+        <div className="font-medium">{title}</div>
+        {subtitle ? <div className="text-xs text-slate-500">{subtitle}</div> : null}
+      </div>
       <div className="mt-1 text-xs leading-5 text-slate-400">{description}</div>
     </button>
   );

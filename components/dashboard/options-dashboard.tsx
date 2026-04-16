@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import useSWR from "swr";
-import { Activity, AlertTriangle, BookOpen, ChevronRight, HelpCircle, RefreshCw } from "lucide-react";
+import { Activity, AlertTriangle, BookOpen, HelpCircle, RefreshCw } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { RecommendationSummary } from "@/components/dashboard/recommendation-summary";
 import { OptionDetailDrawer } from "@/components/recommendation/option-detail-drawer";
@@ -50,6 +50,7 @@ export function OptionsDashboard() {
     data: ticker,
     error: tickerError,
     isLoading: tickerLoading,
+    isValidating: tickerValidating,
     mutate: refreshTicker,
   } = useSWR("btc-ticker", fetchBtcTicker, {
     refreshInterval: 10_000,
@@ -60,6 +61,7 @@ export function OptionsDashboard() {
     data: chain,
     error: chainError,
     isLoading: chainLoading,
+    isValidating: chainValidating,
     mutate: refreshChain,
   } = useSWR("options-chain", fetchOptionsChain, {
     refreshInterval: 20_000,
@@ -91,6 +93,7 @@ export function OptionsDashboard() {
   const topSyntheticRecommendation = isSyntheticMode ? syntheticRecommendations[0] : undefined;
   const totalCount = isSyntheticMode ? syntheticRecommendations.length : standardRecommendations.length;
   const isLoading = tickerLoading || chainLoading;
+  const isValidating = tickerValidating || chainValidating;
   const hasError = tickerError || chainError;
 
   return (
@@ -107,21 +110,19 @@ export function OptionsDashboard() {
               <p className="text-xs text-slate-500">实时拉取 Deribit 行情，给你个性化的策略建议</p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm">
               <span className="text-slate-500">BTC</span>{" "}
               <span className="font-semibold text-white">{ticker?.price ? `$${ticker.price.toLocaleString()}` : "..."}</span>
             </span>
-            <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
-              <span className="text-slate-500">模式</span>{" "}
-              <span className="font-medium text-cyan-300">{getStrategyModeLabel(input.strategy)}</span>
-            </span>
+            <StrategySegmentedControl strategy={input.strategy} onChange={(s) => setInput({ ...input, strategy: s, ...(s === "cash-secured-put" || s === "synthetic-long" ? { acceptAssignment: true } : {}) })} />
             <button
               type="button"
               onClick={() => { void refreshTicker(); void refreshChain(); }}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-slate-400 transition hover:border-cyan-400/30 hover:text-white"
+              className="rounded-lg border border-white/10 bg-white/5 p-2 text-slate-400 transition hover:border-cyan-400/30 hover:text-white"
+              title="刷新数据"
             >
-              <RefreshCw className="size-3.5" />
+              <RefreshCw className={`size-3.5 ${isValidating ? "animate-spin" : ""}`} />
             </button>
           </div>
         </header>
@@ -143,13 +144,6 @@ export function OptionsDashboard() {
           <PageSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
           <div className="min-w-0 flex-1 space-y-5">
-            {/* 面包屑 */}
-            <nav className="flex items-center gap-1.5 text-xs text-slate-500">
-              <span>首页</span>
-              <ChevronRight className="size-3" />
-              <span className="text-slate-300">{getTabLabel(activeTab)}</span>
-            </nav>
-
             {activeTab === "recommendations" && (
               <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
                 <section>
@@ -277,6 +271,45 @@ function getStrategyModeLabel(strategy: RecommendationInput["strategy"]): string
     default:
       return "持有 BTC 卖看涨 (Covered Call)";
   }
+}
+
+const strategyOptions = [
+  { value: "covered-call" as const, label: "卖看涨", shortLabel: "CC" },
+  { value: "cash-secured-put" as const, label: "卖看跌", shortLabel: "CSP" },
+  { value: "synthetic-long" as const, label: "合成现货", shortLabel: "SL" },
+];
+
+function StrategySegmentedControl({
+  strategy,
+  onChange,
+}: {
+  strategy: RecommendationInput["strategy"];
+  onChange: (strategy: RecommendationInput["strategy"]) => void;
+}) {
+  return (
+    <div className="inline-flex rounded-lg border border-white/10 bg-white/5 p-0.5">
+      {strategyOptions.map((opt) => {
+        const isActive = opt.value === strategy;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+              isActive
+                ? opt.value === "synthetic-long"
+                  ? "bg-fuchsia-400/20 text-fuchsia-200"
+                  : "bg-cyan-400/20 text-cyan-200"
+                : "text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            <span className="hidden sm:inline">{opt.label}</span>
+            <span className="sm:hidden">{opt.shortLabel}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function getTabLabel(tab: TabKey): string {
@@ -648,9 +681,12 @@ function SyntheticRecommendationList({ recommendations }: { recommendations: Syn
                 ))}
               </div>
               {item.expiryPayoff.breakEvenPrice != null ? (
-                <p className="mt-3 text-xs text-slate-400">
-                  盈亏平衡价约 ${item.expiryPayoff.breakEvenPrice.toLocaleString()}
-                </p>
+                <div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-3">
+                  <p className="text-xs text-amber-200/80">盈亏平衡价</p>
+                  <p className="mt-1 text-lg font-bold tabular-nums text-amber-100">
+                    ${item.expiryPayoff.breakEvenPrice.toLocaleString()}
+                  </p>
+                </div>
               ) : null}
             </div>
           ) : null}
@@ -731,12 +767,19 @@ function ExpiryPayoffCard({ payoff }: { payoff: ExpiryPayoff }) {
         ))}
       </div>
       {payoff.breakEvenPrice != null ? (
-        <p className="mt-4 text-xs text-emerald-100/80">
-          盈亏平衡价约 ${payoff.breakEvenPrice.toLocaleString()}
-          {payoff.estimatedMonthlyUsd != null ? (
-            <span className="ml-2">（假设每期合约都不被触发，持续做下一期）</span>
-          ) : null}
-        </p>
+        <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs text-amber-200/80">盈亏平衡价</p>
+              <p className="mt-1 text-xl font-bold tabular-nums text-amber-100">
+                ${payoff.breakEvenPrice.toLocaleString()}
+              </p>
+            </div>
+            {payoff.estimatedMonthlyUsd != null ? (
+              <p className="text-xs text-amber-200/60">假设每期不被触发，持续做下一期</p>
+            ) : null}
+          </div>
+        </div>
       ) : null}
     </div>
   );

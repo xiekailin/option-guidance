@@ -74,11 +74,11 @@ export function RecommendationSummary({
       {cards.map((card) => (
         <article
           key={card.label}
-          className="rounded-2xl border border-white/8 bg-white/[0.03] p-4 backdrop-blur"
+          className="rounded-2xl border border-white/8 bg-white/[0.03] p-5 backdrop-blur"
         >
           <p className="text-xs text-slate-500">{card.label}</p>
-          <p className="mt-1.5 text-xl font-bold text-white">{card.value}</p>
-          <p className="mt-1 text-[11px] text-slate-500">{card.hint}</p>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-white">{card.value}</p>
+          <p className="mt-1.5 text-xs text-slate-500">{card.hint}</p>
         </article>
       ))}
       {updatedAt ? (

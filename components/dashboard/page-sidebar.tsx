@@ -7,15 +7,16 @@ export type TabKey = "recommendations" | "calculator" | "comparison" | "volatili
 interface NavItem {
   key: TabKey;
   label: string;
+  shortLabel: string;
   icon: React.ReactNode;
 }
 
 const navItems: NavItem[] = [
-  { key: "recommendations", label: "策略推荐", icon: <Sparkles className="size-4" /> },
-  { key: "calculator", label: "损益计算", icon: <BarChart3 className="size-4" /> },
-  { key: "comparison", label: "策略对比", icon: <GitCompareArrows className="size-4" /> },
-  { key: "volatility", label: "波动率", icon: <Activity className="size-4" /> },
-  { key: "risk", label: "风险提示", icon: <ShieldAlert className="size-4" /> },
+  { key: "recommendations", label: "策略推荐", shortLabel: "推荐", icon: <Sparkles className="size-4" /> },
+  { key: "calculator", label: "损益计算", shortLabel: "损益", icon: <BarChart3 className="size-4" /> },
+  { key: "comparison", label: "策略对比", shortLabel: "对比", icon: <GitCompareArrows className="size-4" /> },
+  { key: "volatility", label: "波动率", shortLabel: "波动率", icon: <Activity className="size-4" /> },
+  { key: "risk", label: "风险提示", shortLabel: "风险", icon: <ShieldAlert className="size-4" /> },
 ];
 
 export { navItems };
@@ -67,7 +68,8 @@ export function PageTabs({ activeTab, onTabChange }: { activeTab: TabKey; onTabC
             }`}
           >
             {item.icon}
-            {item.label}
+            <span className="sm:hidden">{item.shortLabel}</span>
+            <span className="hidden sm:inline">{item.label}</span>
           </button>
         );
       })}

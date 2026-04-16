@@ -12,6 +12,130 @@ interface StrategyComparisonProps {
   availableCashUsd: number;
 }
 
+/* ── Radar chart data ── */
+
+interface RadarPoint {
+  strategy: "covered-call" | "cash-secured-put" | "synthetic-long";
+  label: string;
+  scores: number[]; // one per dimension
+  color: string;
+}
+
+const dimensions = ["收益率", "安全性", "资金效率", "灵活性", "简单程度"];
+
+// Normalized 0-100 scores for each strategy on each dimension
+const radarData: RadarPoint[] = [
+  {
+    strategy: "covered-call",
+    label: "卖看涨",
+    scores: [60, 85, 70, 90, 90],
+    color: "rgb(34 211 238)",
+  },
+  {
+    strategy: "cash-secured-put",
+    label: "卖看跌",
+    scores: [65, 60, 65, 80, 75],
+    color: "rgb(52 211 153)",
+  },
+  {
+    strategy: "synthetic-long",
+    label: "合成现货",
+    scores: [90, 30, 85, 60, 50],
+    color: "rgb(217 70 239)",
+  },
+];
+
+function RadarChart() {
+  const n = dimensions.length;
+  const cx = 150;
+  const cy = 150;
+  const maxR = 110;
+  const angleStep = (2 * Math.PI) / n;
+  const startAngle = -Math.PI / 2;
+
+  const toX = (i: number, r: number) => cx + r * Math.cos(startAngle + i * angleStep);
+  const toY = (i: number, r: number) => cy + r * Math.sin(startAngle + i * angleStep);
+
+  // Grid rings (20%, 40%, 60%, 80%, 100%)
+  const rings = [0.2, 0.4, 0.6, 0.8, 1.0];
+
+  return (
+    <svg viewBox="0 0 300 300" className="mx-auto w-full max-w-xs">
+      {/* Grid rings */}
+      {rings.map((ring) => (
+        <polygon
+          key={ring}
+          points={Array.from({ length: n }, (_, i) => `${toX(i, maxR * ring)},${toY(i, maxR * ring)}`).join(" ")}
+          fill="none"
+          stroke="rgb(148 163 184)"
+          strokeWidth="0.5"
+          strokeOpacity="0.25"
+        />
+      ))}
+
+      {/* Axis lines */}
+      {Array.from({ length: n }, (_, i) => (
+        <line
+          key={i}
+          x1={cx}
+          y1={cy}
+          x2={toX(i, maxR)}
+          y2={toY(i, maxR)}
+          stroke="rgb(148 163 184)"
+          strokeWidth="0.5"
+          strokeOpacity="0.25"
+        />
+      ))}
+
+      {/* Data polygons */}
+      {radarData.map((point) => (
+        <polygon
+          key={point.strategy}
+          points={point.scores.map((s, i) => `${toX(i, (s / 100) * maxR)},${toY(i, (s / 100) * maxR)}`).join(" ")}
+          fill={point.color}
+          fillOpacity="0.1"
+          stroke={point.color}
+          strokeWidth="1.5"
+        />
+      ))}
+
+      {/* Dimension labels */}
+      {dimensions.map((dim, i) => {
+        const labelR = maxR + 18;
+        const x = toX(i, labelR);
+        const y = toY(i, labelR);
+        const anchor = i === 0 ? "middle" : i < n / 2 ? "start" : i === Math.floor(n / 2) ? "middle" : "end";
+        return (
+          <text
+            key={dim}
+            x={x}
+            y={y}
+            textAnchor={anchor}
+            dominantBaseline="central"
+            fill="rgb(148 163 184)"
+            fontSize="11"
+            fontFamily="sans-serif"
+          >
+            {dim}
+          </text>
+        );
+      })}
+
+      {/* Legend */}
+      {radarData.map((point, idx) => (
+        <g key={point.strategy} transform={`translate(${10 + idx * 90}, 285)`}>
+          <circle cx="5" cy="-3" r="4" fill={point.color} />
+          <text x="12" y="0" fill="rgb(203 213 225)" fontSize="10" fontFamily="sans-serif">
+            {point.label}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+/* ── Main component ── */
+
 export function StrategyComparison({
   strategy,
   underlyingPrice,
@@ -50,6 +174,11 @@ export function StrategyComparison({
         <div className="mb-5">
           <h2 className="text-xl font-semibold text-white">三种策略对比</h2>
           <p className="mt-1 text-xs text-slate-400">同样的行情下，三种策略的赚钱方式、风险和资金效率有什么不同</p>
+        </div>
+
+        {/* Radar chart */}
+        <div className="mb-6 rounded-2xl border border-white/8 bg-slate-950/40 p-4">
+          <RadarChart />
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">

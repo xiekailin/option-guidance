@@ -33,52 +33,48 @@ export function OptionsRecommendationTable({
             <tr>
               <th className="px-5 py-4">合约</th>
               <th className="px-5 py-4">执行价</th>
-              <th className="px-5 py-4">到期 / 天数</th>
-              <th className="px-5 py-4">触发概率</th>
-              <th className="px-5 py-4">距触发距离</th>
+              <th className="hidden px-5 py-4 md:table-cell">到期</th>
               <th className="px-5 py-4">单张租金</th>
-              <th className="px-5 py-4">折算年收益</th>
-              <th className="px-5 py-4">等级</th>
-              <th className="px-5 py-4">操作</th>
+              <th className="hidden px-5 py-4 lg:table-cell">等级</th>
+              <th className="px-5 py-4 text-right">操作</th>
             </tr>
           </thead>
           <tbody>
             {recommendations.map((item) => (
-              <tr key={item.contract.instrumentName} className="border-t border-white/5 hover:bg-white/5">
+              <tr key={item.contract.instrumentName} className="border-t border-white/5 transition hover:bg-white/5">
                 <td className="px-5 py-4">
                   <div className="font-medium text-white">{item.contract.instrumentName}</div>
-                  <div className="mt-1 text-xs text-slate-500">最多可做 {item.maxTradeAmountBtc} BTC</div>
+                  <div className="mt-1 text-xs text-slate-500">{item.contract.daysToExpiry} 天后到期</div>
                 </td>
-                <td className="px-5 py-4 text-white">${item.contract.strike.toLocaleString()}</td>
-                <td className="px-5 py-4">
-                  <div>{item.contract.expiration}</div>
-                  <div className="mt-1 text-xs text-slate-500">{item.contract.daysToExpiry} 天</div>
+                <td className="whitespace-nowrap px-5 py-4 text-white">
+                  ${item.contract.strike.toLocaleString()}
+                  <span className="ml-1.5 text-xs text-slate-500">{item.contract.otmPercent}%</span>
                 </td>
-                <td className="px-5 py-4">{Math.abs(item.contract.delta ?? 0).toFixed(3)}</td>
-                <td className="px-5 py-4">{item.contract.otmPercent}%</td>
-                <td className="px-5 py-4">
-                  <div>
+                <td className="hidden whitespace-nowrap px-5 py-4 md:table-cell">
+                  {item.contract.expiration}
+                </td>
+                <td className="whitespace-nowrap px-5 py-4">
+                  <div className="font-medium text-white">
                     {item.premiumPerMinContractUsd != null
                       ? `$${item.premiumPerMinContractUsd.toLocaleString()}`
                       : "--"}
                   </div>
-                  <div className="mt-1 text-xs text-slate-500">{item.premiumPerMinContractBtc} BTC</div>
+                  <div className="mt-0.5 text-xs text-slate-500">{item.premiumPerMinContractBtc} BTC</div>
                 </td>
-                <td className="px-5 py-4">{item.contract.annualizedYieldPercent}%</td>
-                <td className="px-5 py-4">
+                <td className="hidden px-5 py-4 lg:table-cell">
                   <span
                     className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${toneStyles[item.tone]}`}
                   >
                     {item.level}
                   </span>
                 </td>
-                <td className="px-5 py-4">
+                <td className="px-5 py-4 text-right">
                   <button
                     type="button"
                     onClick={() => onSelect(item)}
                     className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-medium text-cyan-100 transition hover:border-cyan-300 hover:bg-cyan-400/20"
                   >
-                    查看详情
+                    详情
                   </button>
                 </td>
               </tr>
