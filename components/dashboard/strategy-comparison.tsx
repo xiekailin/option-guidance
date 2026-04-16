@@ -170,7 +170,7 @@ export function StrategyComparison({
 
   return (
     <section className="scroll-mt-24">
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/20 backdrop-blur">
+      <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-6 shadow-lg shadow-black/10">
         <div className="mb-5">
           <h2 className="text-xl font-semibold text-white">三种策略对比</h2>
           <p className="mt-1 text-xs text-slate-400">同样的行情下，三种策略的赚钱方式、风险和资金效率有什么不同</p>

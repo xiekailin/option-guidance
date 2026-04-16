@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import useSWR from "swr";
 import { Activity, AlertTriangle, BookOpen, HelpCircle, RefreshCw } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
@@ -89,6 +89,8 @@ export function OptionsDashboard() {
   );
   const standardMethodology = useMemo(() => getRecommendationMethodology(input), [input]);
   const syntheticMethodology = useMemo(() => getSyntheticLongMethodology(input), [input]);
+  const handleTabChange = useCallback((tab: TabKey) => setActiveTab(tab), []);
+  const handleSelectRecommendation = useCallback((recommendation: Recommendation) => setSelected(recommendation), []);
   const topRecommendation = isSyntheticMode ? undefined : standardRecommendations[0];
   const topSyntheticRecommendation = isSyntheticMode ? syntheticRecommendations[0] : undefined;
   const totalCount = isSyntheticMode ? syntheticRecommendations.length : standardRecommendations.length;
@@ -97,7 +99,7 @@ export function OptionsDashboard() {
   const hasError = tickerError || chainError;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#12385a_0%,#07111d_32%,#020617_70%)] text-slate-100">
+    <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
         {/* 紧凑头部：一行搞定标题 + 状态 */}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -138,10 +140,10 @@ export function OptionsDashboard() {
         />
 
         {/* 移动端标签 + 桌面端侧边栏 */}
-        <PageTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        <PageTabs activeTab={activeTab} onTabChange={handleTabChange} />
 
         <div className="flex gap-6">
-          <PageSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+          <PageSidebar activeTab={activeTab} onTabChange={handleTabChange} />
 
           <div className="min-w-0 flex-1 space-y-5">
             {activeTab === "recommendations" && (
@@ -190,7 +192,7 @@ export function OptionsDashboard() {
                   ) : (
                     <OptionsRecommendationTable
                       recommendations={standardRecommendations}
-                      onSelect={(recommendation) => setSelected(recommendation)}
+                      onSelect={handleSelectRecommendation}
                     />
                   )}
                 </section>

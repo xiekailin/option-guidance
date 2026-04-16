@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { BarChart3, Activity, GitCompareArrows, ShieldAlert, Sparkles } from "lucide-react";
 
 export type TabKey = "recommendations" | "calculator" | "comparison" | "volatility" | "risk";
@@ -21,10 +22,10 @@ const navItems: NavItem[] = [
 
 export { navItems };
 
-export function PageSidebar({ activeTab, onTabChange }: { activeTab: TabKey; onTabChange: (tab: TabKey) => void }) {
+export const PageSidebar = memo(function PageSidebar({ activeTab, onTabChange }: { activeTab: TabKey; onTabChange: (tab: TabKey) => void }) {
   return (
     <aside className="hidden w-52 shrink-0 xl:block">
-      <nav className="sticky top-6 rounded-2xl border border-white/8 bg-white/[0.03] p-3 backdrop-blur">
+      <nav className="sticky top-6 rounded-2xl border border-white/8 bg-slate-950/75 p-3 shadow-lg shadow-black/10">
         <p className="mb-3 px-3 text-[11px] font-medium uppercase tracking-widest text-slate-500">功能导航</p>
         <div className="space-y-0.5">
           {navItems.map((item) => {
@@ -49,9 +50,9 @@ export function PageSidebar({ activeTab, onTabChange }: { activeTab: TabKey; onT
       </nav>
     </aside>
   );
-}
+});
 
-export function PageTabs({ activeTab, onTabChange }: { activeTab: TabKey; onTabChange: (tab: TabKey) => void }) {
+export const PageTabs = memo(function PageTabs({ activeTab, onTabChange }: { activeTab: TabKey; onTabChange: (tab: TabKey) => void }) {
   return (
     <nav className="flex gap-1.5 overflow-x-auto xl:hidden">
       {navItems.map((item) => {
@@ -75,4 +76,4 @@ export function PageTabs({ activeTab, onTabChange }: { activeTab: TabKey; onTabC
       })}
     </nav>
   );
-}
+});

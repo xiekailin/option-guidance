@@ -34,10 +34,10 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto">
       {/* 遮罩 */}
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/70" onClick={onClose} />
 
       {/* 弹框 */}
-      <div className="relative z-10 mx-4 my-8 w-full max-w-5xl rounded-3xl border border-white/10 bg-[#0c1a2e] p-6 shadow-2xl">
+      <div className="relative z-10 mx-4 my-8 w-full max-w-5xl rounded-3xl border border-white/10 bg-[#0c1a2e] p-6 shadow-lg shadow-black/20">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-white">{title}</h3>
           <button

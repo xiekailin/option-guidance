@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import type { Recommendation } from "@/lib/types/option";
 
 interface OptionsRecommendationTableProps {
@@ -13,20 +14,20 @@ const toneStyles = {
   aggressive: "bg-amber-400/15 text-amber-200 border-amber-400/20",
 };
 
-export function OptionsRecommendationTable({
+export const OptionsRecommendationTable = memo(function OptionsRecommendationTable({
   recommendations,
   onSelect,
 }: OptionsRecommendationTableProps) {
   if (recommendations.length === 0) {
     return (
-      <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-center text-sm leading-7 text-slate-400">
+      <div className="rounded-3xl border border-dashed border-white/10 bg-slate-950/70 p-8 text-center text-sm leading-7 text-slate-400">
         当前条件下没有找到合适候选。你可以放宽最低权利金、调整周/月偏好，或提高可用 BTC / 现金。
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-white/10 bg-slate-950/60 shadow-2xl shadow-black/20">
+    <div className="overflow-hidden rounded-3xl border border-white/10 bg-slate-950/70 shadow-lg shadow-black/10">
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm text-slate-300">
           <thead className="bg-white/5 text-xs uppercase tracking-[0.2em] text-slate-400">
@@ -84,4 +85,4 @@ export function OptionsRecommendationTable({
       </div>
     </div>
   );
-}
+});

@@ -31,13 +31,13 @@ export function OptionDetailDrawer({ recommendation, onClose }: OptionDetailDraw
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-slate-950/70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-40 flex justify-end bg-slate-950/80">
       <button type="button" className="flex-1 cursor-default" onClick={onClose} aria-label="关闭详情" />
       <aside
         role="dialog"
         aria-modal="true"
         aria-label="期权推荐详情"
-        className="h-full w-full max-w-xl overflow-y-auto border-l border-white/10 bg-slate-950 px-6 py-6 shadow-2xl shadow-black/40"
+        className="h-full w-full max-w-xl overflow-y-auto border-l border-white/10 bg-slate-950 px-6 py-6 shadow-lg shadow-black/20"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -83,7 +83,7 @@ export function OptionDetailDrawer({ recommendation, onClose }: OptionDetailDraw
         <Section title="为什么推荐这张">
           <ul className="space-y-3 text-sm leading-6 text-slate-300">
             {recommendation.reasons.map((reason) => (
-              <li key={reason} className="rounded-2xl border border-white/8 bg-white/5 px-4 py-3">
+              <li key={reason} className="rounded-2xl border border-white/8 bg-slate-900/70 px-4 py-3">
                 {reason}
               </li>
             ))}
@@ -93,7 +93,7 @@ export function OptionDetailDrawer({ recommendation, onClose }: OptionDetailDraw
         <Section title="评分拆解">
           <div className="space-y-3">
             {recommendation.scoreBreakdown.map((item) => (
-              <article key={item.key} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <article key={item.key} className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-white">{item.label}</p>
@@ -201,7 +201,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+    <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
       <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{label}</p>
       <p className="mt-2 text-lg font-semibold text-white">{value}</p>
     </div>

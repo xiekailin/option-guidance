@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { Recommendation, SyntheticLongRecommendation } from "@/lib/types/option";
 
 interface RecommendationSummaryProps {
@@ -9,7 +10,7 @@ interface RecommendationSummaryProps {
   updatedAt?: string;
 }
 
-export function RecommendationSummary({
+export const RecommendationSummary = memo(function RecommendationSummary({
   price,
   recommendation,
   syntheticRecommendation,
@@ -74,7 +75,7 @@ export function RecommendationSummary({
       {cards.map((card) => (
         <article
           key={card.label}
-          className="rounded-2xl border border-white/8 bg-white/[0.03] p-5 backdrop-blur"
+          className="rounded-2xl border border-white/8 bg-slate-950/70 p-5"
         >
           <p className="text-xs text-slate-500">{card.label}</p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-white">{card.value}</p>
@@ -86,4 +87,4 @@ export function RecommendationSummary({
       ) : null}
     </section>
   );
-}
+});

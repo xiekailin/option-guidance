@@ -35,7 +35,7 @@ export function VolatilityPanel({
 
   return (
     <section id="volatility" className="scroll-mt-24">
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/20 backdrop-blur">
+      <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-6 shadow-lg shadow-black/10">
         <div className="flex items-center gap-3">
           <Activity className="size-5 text-cyan-300" />
           <div>

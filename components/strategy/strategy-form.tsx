@@ -20,7 +20,7 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
   const isSyntheticMode = input.strategy === "synthetic-long";
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-cyan-950/10 backdrop-blur">
+    <section className="rounded-3xl border border-white/10 bg-slate-950/75 p-6 shadow-lg shadow-black/10">
       <div className="mb-6">
         <p className="text-sm font-medium text-cyan-300">输入你的条件</p>
         <h2 className="mt-2 text-2xl font-semibold text-white">生成个性化期权建议</h2>
