@@ -669,7 +669,7 @@ function LongCallInterpretationPanel({
           <ReadingHint label="单张权利金" description="这是你入场时付出的全部成本，也是这张票理论上的最大亏损。" />
           <ReadingHint label="盈亏平衡价" description="BTC 到期至少要涨到这个价位附近，你才开始真正值回票价。" />
           <ReadingHint label="Delta" description="越高越接近现货替代，越低越偏赔率更大但更依赖大涨。" />
-          <ReadingHint label="30-90 天" description="这是本次产品定义里的相对长周期，不是超短线赌方向。" />
+          <ReadingHint label="180-365 天" description="这是本次产品定义里的半年到一年窗口，用来表达更长期的看涨判断。" />
         </div>
       </article>
 
@@ -805,14 +805,14 @@ function LongCallStoryPanel() {
       <div className="max-w-4xl">
         <p className="text-sm font-medium text-emerald-200">佩洛西打法是什么</p>
         <p className="mt-3 text-sm leading-7 text-slate-200">
-          这里说的“佩洛西打法”，本质上不是收租，也不是神秘内幕模板，而是用一张相对长一点的 BTC Call，去表达中期看涨判断：先把最大亏损锁在权利金里，等行情自己走出来。
+          这里说的“佩洛西打法”，本质上不是收租，也不是神秘内幕模板，而是用一张半年到一年期限的 BTC Call，去表达更长期的看涨判断：先把最大亏损锁在权利金里，等行情自己走出来。
         </p>
       </div>
 
       <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-slate-950/40 p-4 text-sm leading-7 text-emerald-50/95">
         <p className="font-medium text-emerald-100">大白话讲解</p>
         <ul className="mt-2 space-y-2">
-          <li>- 你不是在收租，你是在花一笔可见的门票钱，买未来一段时间 BTC 上涨的弹性。</li>
+          <li>- 你不是在收租，你是在花一笔可见的门票钱，买未来半年到一年 BTC 上涨的弹性。</li>
           <li>- 涨得够快、够猛，这张票会明显升值；涨得太慢，票也可能一天天缩水。</li>
           <li>- 最坏情况不是“无限亏”，而是这张 Call 到期没价值，你亏掉整张票的钱。</li>
         </ul>
@@ -827,14 +827,14 @@ function LongCallMethodologyPanel({ methodology }: { methodology: LongCallMethod
       <div className="max-w-3xl">
         <p className="text-sm font-medium text-white">佩洛西打法说明</p>
         <p className="mt-3 text-sm leading-7 text-slate-300">
-          这里说的“佩洛西打法”，不是神秘秘籍，而是把民间常说的“买长一点的看涨期权，方向对了就吃上涨弹性，临近到期再决定走不走”标准化成一个 BTC 版本。
+          这里说的“佩洛西打法”，不是神秘秘籍，而是把民间常说的“买半年到一年的看涨期权，方向对了就吃上涨弹性，临近到期再决定走不走”标准化成一个 BTC 版本。
         </p>
       </div>
 
       <div className="mt-6 rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5 text-sm leading-7 text-emerald-50/95">
         <p className="font-medium text-emerald-100">大白话解释</p>
         <ul className="mt-3 space-y-2">
-          <li>- 你不是在收租，而是在花一笔看得见的成本，买未来一段时间 BTC 上涨的弹性。</li>
+          <li>- 你不是在收租，而是在花一笔看得见的成本，买未来半年到一年 BTC 上涨的弹性。</li>
           <li>- 它像是“先花小钱买一个看涨门票”，涨得快、涨得够多，这张门票就值钱。</li>
           <li>- 如果 BTC 不涨、涨得太慢，或者波动率回落，这张票就会慢慢缩水，最坏情况直接归零。</li>
         </ul>

@@ -16,8 +16,8 @@ import type {
   RecommendationTone,
 } from "../types/option";
 
-const MIN_DAYS = 30;
-const MAX_DAYS = 90;
+const MIN_DAYS = 180;
+const MAX_DAYS = 365;
 const MAX_LONG_CALL_RECOMMENDATIONS = 10;
 
 export function buildLongCallRecommendations(
@@ -104,7 +104,7 @@ export function getLongCallMethodology(
       },
       {
         label: "长周期窗口",
-        description: `固定筛选 ${MIN_DAYS} - ${MAX_DAYS} 天到期的合约，用相对长周期表达中期看涨观点。`,
+        description: `固定筛选 ${MIN_DAYS} - ${MAX_DAYS} 天到期的合约，用半年到一年的 BTC Call 表达长期看涨观点。`,
       },
       {
         label: "现金约束",
@@ -121,7 +121,7 @@ export function getLongCallMethodology(
     ],
     scoring: [
       { label: "Delta 匹配", weightPercent: 24, description: "杠杆程度是否符合你的风险偏好。" },
-      { label: "期限匹配", weightPercent: 20, description: "越接近 30-90 天窗口中部，越像中期看涨布局。" },
+      { label: "期限匹配", weightPercent: 20, description: "越接近半年到一年的窗口中部，越像长期看涨布局。" },
       { label: "成本占比", weightPercent: 18, description: "单张权利金占可用现金的比例是否合理。" },
       { label: "流动性", weightPercent: 14, description: "综合 OI 和成交量，避免纸面上便宜但不好成交。" },
       { label: "隐波成本", weightPercent: 14, description: "IV 越不极端，越不容易出现“方向看对但买太贵”的情况。" },
@@ -129,7 +129,7 @@ export function getLongCallMethodology(
     ],
     notes: [
       "这不是收租策略，最大亏损是买入权利金，最坏情况可以亏掉 100% 权利金。",
-      "30-90 天只是 BTC 市场里的相对长周期，不等于美股 LEAPS 的超长期限。",
+      "这里的佩洛西打法按半年到一年定义，更接近长期看涨表达，不是短线方向票。",
       "首版只做选仓与解释，不做自动滚动续仓；临近到期时你仍需自己决定平仓、展期或放弃。",
     ],
   };
@@ -278,7 +278,7 @@ function buildScoreBreakdown({
       scorePercent: roundTo(durationFit * 100, 0),
       weightPercent: 20,
       contribution: roundTo(durationFit * 20, 1),
-      explanation: `剩余 ${option.daysToExpiry} 天，越接近 30-90 天窗口中部，越符合这次“佩洛西打法”的定义。`,
+      explanation: `剩余 ${option.daysToExpiry} 天，越接近半年到一年的窗口中部，越符合这次“佩洛西打法”的定义。`,
     },
     {
       key: "affordability",
@@ -322,7 +322,7 @@ function buildSummary(
   breakEvenPrice: number | null,
   input: Pick<RecommendationInput, "riskTolerance">,
 ): string {
-  return `这张 ${option.daysToExpiry} 天后的 BTC Call 更像中期看涨表达：最大亏损锁定在权利金，执行价 ${option.strike.toLocaleString()}，适合 ${riskLabel(input.riskTolerance)} 用有限亏损换上涨弹性${breakEvenPrice != null ? `，到期盈亏平衡约 $${breakEvenPrice.toLocaleString()}` : ""}。`;
+  return `这张 ${option.daysToExpiry} 天后的 BTC Call 更像长期看涨表达：最大亏损锁定在权利金，执行价 ${option.strike.toLocaleString()}，适合 ${riskLabel(input.riskTolerance)} 用有限亏损换上涨弹性${breakEvenPrice != null ? `，到期盈亏平衡约 $${breakEvenPrice.toLocaleString()}` : ""}。`;
 }
 
 function buildAlgorithmTags(option: OptionContract, premiumPerMinContractUsd: number | null): string[] {
@@ -342,7 +342,7 @@ function buildReasons(
   input: Pick<RecommendationInput, "riskTolerance">,
 ): string[] {
   return [
-    `剩余 ${option.daysToExpiry} 天，落在这次定义的 30-90 天长周期窗口内。`,
+    `剩余 ${option.daysToExpiry} 天，落在这次定义的 180-365 天长周期窗口内。`,
     `Delta 约 ${Math.abs(option.delta ?? 0).toFixed(2)}，更符合 ${riskLabel(input.riskTolerance)} 对上涨弹性和兑现概率的平衡。`,
     premiumPerMinContractUsd != null
       ? `每张 0.1 BTC 的权利金约 $${premiumPerMinContractUsd.toLocaleString()}，亏损上限清晰。`

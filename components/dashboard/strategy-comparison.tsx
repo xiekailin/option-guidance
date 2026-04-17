@@ -173,7 +173,7 @@ export function StrategyComparison({
     {
       key: "long-call" as const,
       label: "佩洛西打法（Long Call）",
-      subtitle: "买 30-90 天 BTC Call",
+      subtitle: "买半年到一年 BTC Call",
       data: longCallRecommendation ? buildLongCallMetrics(longCallRecommendation) : null,
       color: "emerald" as const,
     },
@@ -246,7 +246,7 @@ export function StrategyComparison({
             <li>- <strong>看涨但想赚租金</strong> → 持有 BTC 卖看涨，赚权利金但涨太多你就卖飞了。</li>
             <li>- <strong>想低价接 BTC</strong> → 卖看跌准备接货，先赚一笔权利金，真跌了就按折扣价买入 BTC。</li>
             <li>- <strong>强烈看涨且能扛波动</strong> → 模拟持有 BTC，上涨弹性最强，但暴跌与押金压力也最大。</li>
-            <li>- <strong>只想用小钱押中期上涨</strong> → 佩洛西打法，最大亏损锁在权利金，但看对方向也要看对时间。</li>
+            <li>- <strong>只想用小钱押长期上涨</strong> → 佩洛西打法，最大亏损锁在权利金，但看对方向也要看对时间。</li>
           </ul>
         </div>
       </div>

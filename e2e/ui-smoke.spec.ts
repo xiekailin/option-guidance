@@ -119,7 +119,7 @@ function buildOptionChain() {
       volume: 245,
     }),
     buildOptionSummary({
-      daysAhead: 45,
+      daysAhead: 240,
       strike: 76_000,
       optionType: "call",
       markPrice: 0.0205,
@@ -128,7 +128,7 @@ function buildOptionChain() {
       volume: 110,
     }),
     buildOptionSummary({
-      daysAhead: 45,
+      daysAhead: 300,
       strike: 76_500,
       optionType: "call",
       markPrice: 0.0198,
@@ -261,12 +261,12 @@ test("切到佩洛西打法后会显示解释文案、买方字段和损益图",
   await expect(page.getByText("权利金 = 全部风险", { exact: true })).toBeVisible();
   await expect(page.getByText("到期范围", { exact: true })).toBeVisible();
   await expect(page.getByText("展期方式", { exact: true })).toBeVisible();
-  await expect(page.getByText("固定筛选 30-90 天", { exact: true })).toBeVisible();
+  await expect(page.getByText("固定筛选 180-365 天", { exact: true })).toBeVisible();
   await expect(page.getByText("权利金 = 全部风险", { exact: true })).toBeVisible();
   await expect(page.getByText("首版不自动滚动", { exact: true })).toBeVisible();
   await expect(page.getByText("佩洛西打法是什么", { exact: true })).toBeVisible();
   await expect(page.getByText("大白话讲解", { exact: true })).toBeVisible();
-  await expect(page.getByText("你不是在收租，你是在花一笔可见的门票钱，买未来一段时间 BTC 上涨的弹性。")).toBeVisible();
+  await expect(page.getByText("你不是在收租，你是在花一笔可见的门票钱，买未来半年到一年 BTC 上涨的弹性。")).toBeVisible();
   await expect(page.getByText("可用 BTC", { exact: true })).toHaveCount(0);
   await expect(page.getByText("最低单期权利金 %", { exact: true })).toHaveCount(0);
 

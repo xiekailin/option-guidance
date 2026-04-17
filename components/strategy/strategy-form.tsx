@@ -36,7 +36,7 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
           {isSyntheticMode
             ? "页面会根据你的周期偏好、可用现金和风险偏好，实时筛出更适合的买看涨 + 卖看跌，强烈看涨的组合。"
             : isLongCallMode
-              ? "页面会根据你的可用现金和风险偏好，筛出更适合用 30-90 天 BTC Call 表达中期看涨观点的仓位。"
+              ? "页面会根据你的可用现金和风险偏好，筛出更适合用半年到一年 BTC Call 表达长期看涨观点的仓位。"
               : "页面会根据你的持仓、可用资金、周期偏好和风险偏好，实时筛出更适合的持有 BTC 卖看涨，或卖看跌准备接货。"}
         </p>
       </div>
@@ -70,7 +70,7 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
               active={input.strategy === "long-call"}
               title="佩洛西打法"
               subtitle="Long Call"
-              description="买 30-90 天 BTC Call，用有限亏损换上涨弹性"
+              description="买半年到一年 BTC Call，用有限亏损换上涨弹性"
               onClick={() => onChange({ ...input, strategy: "long-call", acceptAssignment: false, cycle: "monthly" })}
             />
           </div>
@@ -120,8 +120,8 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
           {isLongCallMode ? (
             <StaticInfoField
               label="到期范围"
-              value="固定筛选 30-90 天"
-              hint="这是这次“佩洛西打法”的产品定义：用相对长周期的 BTC Call 表达中期看涨观点。"
+              value="固定筛选 180-365 天"
+              hint="这是这次“佩洛西打法”的产品定义：用半年到一年的 BTC Call 表达长期看涨观点。"
             />
           ) : (
             <SelectField

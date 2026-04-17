@@ -14,9 +14,9 @@ const baseInput = {
 };
 
 const baseOption = {
-  expirationCode: "20JUN26",
-  expiration: "6月20日 08:00",
-  expirationTimestamp: Date.now() + 45 * 24 * 60 * 60 * 1000,
+  expirationCode: "20DEC26",
+  expiration: "12月20日 08:00",
+  expirationTimestamp: Date.now() + 240 * 24 * 60 * 60 * 1000,
   bidPrice: 0.02,
   askPrice: 0.021,
   markPrice: 0.0205,
@@ -31,26 +31,31 @@ const baseOption = {
   premiumUsdPerBtc: 1_517,
   optionType: "call" as const,
   strike: 76_000,
-  daysToExpiry: 45,
+  daysToExpiry: 240,
   delta: 0.43,
   otmPercent: 2.7,
 };
 
-test("佩洛西打法只保留 30-90 天的 call", () => {
+test("佩洛西打法只保留 180-365 天的 call", () => {
   const options = [
     {
       ...baseOption,
-      instrumentName: "BTC-20JUN26-76000-C",
-      daysToExpiry: 45,
+      instrumentName: "BTC-20DEC26-76000-C",
+      daysToExpiry: 240,
     },
     {
       ...baseOption,
-      instrumentName: "BTC-10MAY26-76000-C",
-      daysToExpiry: 22,
+      instrumentName: "BTC-10SEP26-76000-C",
+      daysToExpiry: 179,
     },
     {
       ...baseOption,
-      instrumentName: "BTC-20JUN26-72000-P",
+      instrumentName: "BTC-20JAN27-76000-C",
+      daysToExpiry: 366,
+    },
+    {
+      ...baseOption,
+      instrumentName: "BTC-20DEC26-72000-P",
       optionType: "put" as const,
       delta: -0.43,
       otmPercent: 2.7,
@@ -60,14 +65,37 @@ test("佩洛西打法只保留 30-90 天的 call", () => {
   const recommendations = buildLongCallRecommendations(options, baseInput);
 
   assert.equal(recommendations.length, 1);
-  assert.equal(recommendations[0]?.contract.instrumentName, "BTC-20JUN26-76000-C");
+  assert.equal(recommendations[0]?.contract.instrumentName, "BTC-20DEC26-76000-C");
+});
+
+test("180 天和 365 天边界会被保留", () => {
+  const options = [
+    {
+      ...baseOption,
+      instrumentName: "BTC-EDGE180-76000-C",
+      daysToExpiry: 180,
+    },
+    {
+      ...baseOption,
+      instrumentName: "BTC-EDGE365-76000-C",
+      daysToExpiry: 365,
+    },
+  ];
+
+  const recommendations = buildLongCallRecommendations(options, baseInput);
+
+  assert.equal(recommendations.length, 2);
+  assert.deepEqual(
+    recommendations.map((item) => item.contract.instrumentName).sort(),
+    ["BTC-EDGE180-76000-C", "BTC-EDGE365-76000-C"],
+  );
 });
 
 test("现金不足时不会返回候选", () => {
   const options = [
     {
       ...baseOption,
-      instrumentName: "BTC-20JUN26-76000-C",
+      instrumentName: "BTC-20DEC26-76000-C",
       premiumUsdPerBtc: 30_000,
       markPrice: 0.4,
     },
@@ -82,14 +110,14 @@ test("风险偏好会影响 long call 的筛选窗口", () => {
   const options = [
     {
       ...baseOption,
-      instrumentName: "BTC-20JUN26-74500-C",
+      instrumentName: "BTC-20DEC26-74500-C",
       strike: 74_500,
       delta: 0.6,
       otmPercent: 0.7,
     },
     {
       ...baseOption,
-      instrumentName: "BTC-20JUN26-79000-C",
+      instrumentName: "BTC-20DEC26-79000-C",
       strike: 79_000,
       delta: 0.28,
       otmPercent: 6.8,
@@ -106,23 +134,23 @@ test("风险偏好会影响 long call 的筛选窗口", () => {
   });
 
   assert.equal(conservative.length, 1);
-  assert.equal(conservative[0]?.contract.instrumentName, "BTC-20JUN26-74500-C");
+  assert.equal(conservative[0]?.contract.instrumentName, "BTC-20DEC26-74500-C");
   assert.equal(aggressive.length, 1);
-  assert.equal(aggressive[0]?.contract.instrumentName, "BTC-20JUN26-79000-C");
+  assert.equal(aggressive[0]?.contract.instrumentName, "BTC-20DEC26-79000-C");
 });
 
 test("高 IV 合约会在排序上吃亏", () => {
   const options = [
     {
       ...baseOption,
-      instrumentName: "BTC-20JUN26-76000-C",
+      instrumentName: "BTC-20DEC26-76000-C",
       markIv: 46,
       volume: 150,
       openInterest: 700,
     },
     {
       ...baseOption,
-      instrumentName: "BTC-20JUN26-76500-C",
+      instrumentName: "BTC-20DEC26-76500-C",
       strike: 76_500,
       otmPercent: 3.4,
       markIv: 92,
@@ -133,14 +161,14 @@ test("高 IV 合约会在排序上吃亏", () => {
 
   const recommendations = buildLongCallRecommendations(options, baseInput);
 
-  assert.equal(recommendations[0]?.contract.instrumentName, "BTC-20JUN26-76000-C");
+  assert.equal(recommendations[0]?.contract.instrumentName, "BTC-20DEC26-76000-C");
 });
 
 test("long call 会给出最大亏损和盈亏平衡价", () => {
   const options = [
     {
       ...baseOption,
-      instrumentName: "BTC-20JUN26-76000-C",
+      instrumentName: "BTC-20DEC26-76000-C",
     },
   ];
 
@@ -164,13 +192,14 @@ test("long-call 模式下输入校验不再要求 BTC 和最低权利金", () =>
   assert.deepEqual(errors, []);
 });
 
-test("算法说明会反映 30-90 天和最大亏损=权利金", () => {
+test("算法说明会反映 180-365 天和最大亏损=权利金", () => {
   const methodology = getLongCallMethodology({
     riskTolerance: "balanced",
     availableCashUsd: 2000,
   });
 
-  assert.ok(methodology.filters.some((item) => item.description.includes("30 - 90 天") || item.description.includes("30-90 天")));
+  assert.ok(methodology.filters.some((item) => item.description.includes("180 - 365 天") || item.description.includes("180-365 天") || item.description.includes("半年到一年")));
   assert.ok(methodology.notes.some((item) => item.includes("最大亏损") && item.includes("权利金")));
+  assert.ok(methodology.notes.some((item) => item.includes("半年到一年") || item.includes("长期看涨")));
   assert.ok(methodology.scoring.some((item) => item.label === "隐波成本"));
 });

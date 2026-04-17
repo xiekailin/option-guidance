@@ -42,7 +42,7 @@ export function LongCallDetailDrawer({ recommendation, onClose }: LongCallDetail
           <div>
             <p className="text-sm text-cyan-300">{recommendation.level}</p>
             <h3 className="mt-2 text-2xl font-semibold text-white">{recommendation.contract.instrumentName}</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-400">这是一张 30-90 天 BTC Call，最大亏损锁定在权利金，适合用有限亏损换上涨弹性。</p>
+            <p className="mt-2 text-sm leading-6 text-slate-400">这是一张半年到一年期限的 BTC Call，最大亏损锁定在权利金，适合用有限亏损换长期上涨弹性。</p>
           </div>
           <button
             type="button"
