@@ -1,4 +1,4 @@
-export type StrategyType = "covered-call" | "cash-secured-put" | "synthetic-long";
+export type StrategyType = "covered-call" | "cash-secured-put" | "synthetic-long" | "long-call";
 
 export type CyclePreference = "weekly" | "monthly";
 
@@ -112,6 +112,21 @@ export interface RecommendationScenario {
   description: string;
 }
 
+export interface LongCallScoreBreakdownItem {
+  key:
+    | "delta-fit"
+    | "duration-fit"
+    | "affordability"
+    | "liquidity"
+    | "iv-cost"
+    | "moneyness";
+  label: string;
+  scorePercent: number;
+  weightPercent: number;
+  contribution: number;
+  explanation: string;
+}
+
 export interface ExpiryPayoffScenario {
   title: string;
   description: string;
@@ -147,6 +162,28 @@ export interface Recommendation {
   scenarios: RecommendationScenario[];
   unsuitableScenarios: string[];
   assignmentText: string;
+  expiryPayoff: ExpiryPayoff;
+}
+
+export interface LongCallRecommendation {
+  contract: OptionContract;
+  strategy: "long-call";
+  score: number;
+  level: RecommendationLevel;
+  tone: RecommendationTone;
+  maxLots: number;
+  maxTradeAmountBtc: number;
+  premiumPerMinContractBtc: number;
+  premiumPerMinContractUsd: number | null;
+  maxLossUsd: number | null;
+  breakEvenPrice: number | null;
+  summary: string;
+  algorithmTags: string[];
+  reasons: string[];
+  risks: string[];
+  scoreBreakdown: LongCallScoreBreakdownItem[];
+  scenarios: RecommendationScenario[];
+  unsuitableScenarios: string[];
   expiryPayoff: ExpiryPayoff;
 }
 

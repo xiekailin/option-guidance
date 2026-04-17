@@ -1,29 +1,33 @@
 "use client";
 
 import { ShieldAlert, TrendingDown, TrendingUp, Wallet } from "lucide-react";
-import type { Recommendation, SyntheticLongRecommendation, StrategyType } from "@/lib/types/option";
+import type {
+  LongCallRecommendation,
+  Recommendation,
+  SyntheticLongRecommendation,
+  StrategyType,
+} from "@/lib/types/option";
 
 interface StrategyComparisonProps {
   strategy: StrategyType;
   underlyingPrice: number | undefined;
-  recommendation: Recommendation | undefined;
+  coveredCallRecommendation: Recommendation | undefined;
+  cashSecuredPutRecommendation: Recommendation | undefined;
   syntheticRecommendation: SyntheticLongRecommendation | undefined;
+  longCallRecommendation: LongCallRecommendation | undefined;
   availableBtc: number;
   availableCashUsd: number;
 }
 
-/* ── Radar chart data ── */
-
 interface RadarPoint {
-  strategy: "covered-call" | "cash-secured-put" | "synthetic-long";
+  strategy: "covered-call" | "cash-secured-put" | "synthetic-long" | "long-call";
   label: string;
-  scores: number[]; // one per dimension
+  scores: number[];
   color: string;
 }
 
 const dimensions = ["收益率", "安全性", "资金效率", "灵活性", "简单程度"];
 
-// Normalized 0-100 scores for each strategy on each dimension
 const radarData: RadarPoint[] = [
   {
     strategy: "covered-call",
@@ -43,6 +47,12 @@ const radarData: RadarPoint[] = [
     scores: [90, 30, 85, 60, 50],
     color: "rgb(217 70 239)",
   },
+  {
+    strategy: "long-call",
+    label: "佩洛西",
+    scores: [82, 72, 88, 78, 92],
+    color: "rgb(74 222 128)",
+  },
 ];
 
 function RadarChart() {
@@ -55,13 +65,10 @@ function RadarChart() {
 
   const toX = (i: number, r: number) => cx + r * Math.cos(startAngle + i * angleStep);
   const toY = (i: number, r: number) => cy + r * Math.sin(startAngle + i * angleStep);
-
-  // Grid rings (20%, 40%, 60%, 80%, 100%)
   const rings = [0.2, 0.4, 0.6, 0.8, 1.0];
 
   return (
     <svg viewBox="0 0 300 300" className="mx-auto w-full max-w-xs">
-      {/* Grid rings */}
       {rings.map((ring) => (
         <polygon
           key={ring}
@@ -73,7 +80,6 @@ function RadarChart() {
         />
       ))}
 
-      {/* Axis lines */}
       {Array.from({ length: n }, (_, i) => (
         <line
           key={i}
@@ -87,11 +93,10 @@ function RadarChart() {
         />
       ))}
 
-      {/* Data polygons */}
       {radarData.map((point) => (
         <polygon
           key={point.strategy}
-          points={point.scores.map((s, i) => `${toX(i, (s / 100) * maxR)},${toY(i, (s / 100) * maxR)}`).join(" ")}
+          points={point.scores.map((score, i) => `${toX(i, (score / 100) * maxR)},${toY(i, (score / 100) * maxR)}`).join(" ")}
           fill={point.color}
           fillOpacity="0.1"
           stroke={point.color}
@@ -99,7 +104,6 @@ function RadarChart() {
         />
       ))}
 
-      {/* Dimension labels */}
       {dimensions.map((dim, i) => {
         const labelR = maxR + 18;
         const x = toX(i, labelR);
@@ -121,9 +125,8 @@ function RadarChart() {
         );
       })}
 
-      {/* Legend */}
       {radarData.map((point, idx) => (
-        <g key={point.strategy} transform={`translate(${10 + idx * 90}, 285)`}>
+        <g key={point.strategy} transform={`translate(${8 + idx * 72}, 285)`}>
           <circle cx="5" cy="-3" r="4" fill={point.color} />
           <text x="12" y="0" fill="rgb(203 213 225)" fontSize="10" fontFamily="sans-serif">
             {point.label}
@@ -134,57 +137,83 @@ function RadarChart() {
   );
 }
 
-/* ── Main component ── */
-
 export function StrategyComparison({
-  strategy,
   underlyingPrice,
-  recommendation,
+  coveredCallRecommendation,
+  cashSecuredPutRecommendation,
   syntheticRecommendation,
+  longCallRecommendation,
   availableBtc,
   availableCashUsd,
 }: StrategyComparisonProps) {
   const spot = underlyingPrice ?? 0;
 
-  const coveredCallData = strategy === "covered-call" && recommendation
-    ? buildStrategyMetrics("covered-call", recommendation, spot, availableBtc, availableCashUsd)
-    : null;
-
-  const cspData = strategy === "cash-secured-put" && recommendation
-    ? buildStrategyMetrics("cash-secured-put", recommendation, spot, availableBtc, availableCashUsd)
-    : null;
-
-  const syntheticData = syntheticRecommendation
-    ? buildSyntheticMetrics(syntheticRecommendation, spot)
-    : null;
-
   const columns = [
-    { key: "covered-call" as const, label: "持有 BTC 卖看涨（Covered Call）", subtitle: "持有 BTC 卖看涨", data: coveredCallData, color: "cyan" as const },
-    { key: "cash-secured-put" as const, label: "卖看跌准备接货（Cash-Secured Put）", subtitle: "卖看跌准备接货", data: cspData, color: "cyan" as const },
-    { key: "synthetic-long" as const, label: "模拟持有 BTC（Synthetic Long）", subtitle: "买看涨 + 卖看跌", data: syntheticData, color: "fuchsia" as const },
+    {
+      key: "covered-call" as const,
+      label: "持有 BTC 卖看涨（Covered Call）",
+      subtitle: "持有 BTC 卖看涨",
+      data: coveredCallRecommendation ? buildStrategyMetrics("covered-call", coveredCallRecommendation, spot, availableBtc, availableCashUsd) : null,
+      color: "cyan" as const,
+    },
+    {
+      key: "cash-secured-put" as const,
+      label: "卖看跌准备接货（Cash-Secured Put）",
+      subtitle: "卖看跌准备接货",
+      data: cashSecuredPutRecommendation ? buildStrategyMetrics("cash-secured-put", cashSecuredPutRecommendation, spot, availableBtc, availableCashUsd) : null,
+      color: "teal" as const,
+    },
+    {
+      key: "synthetic-long" as const,
+      label: "模拟持有 BTC（Synthetic Long）",
+      subtitle: "买看涨 + 卖看跌",
+      data: syntheticRecommendation ? buildSyntheticMetrics(syntheticRecommendation, spot) : null,
+      color: "fuchsia" as const,
+    },
+    {
+      key: "long-call" as const,
+      label: "佩洛西打法（Long Call）",
+      subtitle: "买 30-90 天 BTC Call",
+      data: longCallRecommendation ? buildLongCallMetrics(longCallRecommendation) : null,
+      color: "emerald" as const,
+    },
   ];
 
-  const borderColor = { cyan: "border-cyan-400/20 bg-cyan-400/5", fuchsia: "border-fuchsia-400/20 bg-fuchsia-400/5" };
-  const badgeColor = { cyan: "bg-cyan-400/15 text-cyan-200 border-cyan-400/20", fuchsia: "bg-fuchsia-400/15 text-fuchsia-200 border-fuchsia-400/20" };
-  const iconColor = { cyan: "text-cyan-400", fuchsia: "text-fuchsia-400" };
+  const borderColor = {
+    cyan: "border-cyan-400/20 bg-cyan-400/5",
+    teal: "border-emerald-400/20 bg-emerald-400/5",
+    fuchsia: "border-fuchsia-400/20 bg-fuchsia-400/5",
+    emerald: "border-lime-400/20 bg-lime-400/5",
+  };
+  const badgeColor = {
+    cyan: "bg-cyan-400/15 text-cyan-200 border-cyan-400/20",
+    teal: "bg-emerald-400/15 text-emerald-200 border-emerald-400/20",
+    fuchsia: "bg-fuchsia-400/15 text-fuchsia-200 border-fuchsia-400/20",
+    emerald: "bg-lime-400/15 text-lime-200 border-lime-400/20",
+  };
+  const iconColor = {
+    cyan: "text-cyan-400",
+    teal: "text-emerald-400",
+    fuchsia: "text-fuchsia-400",
+    emerald: "text-lime-400",
+  };
 
   return (
     <section className="scroll-mt-24">
       <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-6 shadow-lg shadow-black/10">
         <div className="mb-5">
-          <h2 className="text-xl font-semibold text-white">三种策略对比</h2>
-          <p className="mt-1 text-xs text-slate-400">同样的行情下，三种策略的赚钱方式、风险和资金效率有什么不同</p>
+          <h2 className="text-xl font-semibold text-white">策略对比</h2>
+          <p className="mt-1 text-xs text-slate-400">同样的行情下，四种策略的赚钱方式、风险和资金效率有什么不同</p>
         </div>
 
-        {/* Radar chart */}
         <div className="mb-6 rounded-2xl border border-white/8 bg-slate-950/40 p-4">
           <RadarChart />
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 xl:grid-cols-4">
           {columns.map((col) => (
             <div key={col.key} className={`rounded-2xl border p-5 ${col.data ? borderColor[col.color] : "border-white/5 bg-slate-950/40 opacity-50"}`}>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium text-white">{col.label}</p>
                   <p className="mt-1 text-xs text-slate-400">{col.subtitle}</p>
@@ -205,7 +234,7 @@ export function StrategyComparison({
                   <ComparisonRow label="风险本质" value={col.data.riskNature} hint="" icon={<ShieldAlert className="size-3.5 text-amber-400" />} />
                 </div>
               ) : (
-                <p className="mt-6 text-center text-xs text-slate-500">当前策略模式下无推荐数据</p>
+                <p className="mt-6 text-center text-xs text-slate-500">当前条件下暂无推荐数据</p>
               )}
             </div>
           ))}
@@ -216,8 +245,8 @@ export function StrategyComparison({
           <ul className="mt-2 space-y-1">
             <li>- <strong>看涨但想赚租金</strong> → 持有 BTC 卖看涨，赚权利金但涨太多你就卖飞了。</li>
             <li>- <strong>想低价接 BTC</strong> → 卖看跌准备接货，先赚一笔权利金，真跌了就按折扣价买入 BTC。</li>
-            <li>- <strong>强烈看涨不怕跌</strong> → 模拟持有 BTC，几乎不花钱就能跟涨，但暴跌时亏得很惨。</li>
-            <li>- 没有哪种策略绝对好，关键是看你觉得 BTC 会涨还是跌，以及你能承受多大的亏损。</li>
+            <li>- <strong>强烈看涨且能扛波动</strong> → 模拟持有 BTC，上涨弹性最强，但暴跌与押金压力也最大。</li>
+            <li>- <strong>只想用小钱押中期上涨</strong> → 佩洛西打法，最大亏损锁在权利金，但看对方向也要看对时间。</li>
           </ul>
         </div>
       </div>
@@ -258,30 +287,29 @@ function buildStrategyMetrics(
     return {
       maxProfitText: `$${Math.round(maxProfit).toLocaleString()}`,
       maxProfitHint: `权利金 $${Math.round(premium)} + 执行价和现价的价差`,
-      maxLossText: `$${Math.round(maxLoss).toLocaleString()}`,
-      maxLossHint: `如果 BTC 跌到 0，你亏掉全部 BTC 的市值（极端情况）`,
+      maxLossText: `$${Math.round(Math.abs(maxLoss)).toLocaleString()}`,
+      maxLossHint: "如果 BTC 大跌，你主要亏的是手里现货的市值",
       breakEvenText: `$${Math.round(breakEven).toLocaleString()}`,
-      breakEvenHint: `BTC 跌到这个价格，你的权利金刚好抵消 BTC 下跌`,
+      breakEvenHint: "BTC 跌到这个价格，权利金刚好抵消现货下跌",
       capitalText: `${availableBtc} BTC ≈ $${Math.round(capitalBtc).toLocaleString()}`,
-      capitalHint: `你拿来做持有 BTC 卖看涨的 BTC 的市值`,
+      capitalHint: "你拿来做持有 BTC 卖看涨的现货市值",
       riskNature: "涨幅被封顶",
       riskLabel: "稳健",
     };
   }
 
-  // cash-secured-put
   const breakEven = strike - premium / size;
-  const maxLoss = (strike * size) - premium;
+  const maxLoss = strike * size - premium;
 
   return {
     maxProfitText: `$${Math.round(premium).toLocaleString()}`,
-    maxProfitHint: `如果 BTC 不跌到执行价，你白赚这笔权利金`,
-    maxLossText: `$${Math.round(maxLoss).toLocaleString()}`,
-    maxLossHint: `如果 BTC 跌到 0，你要按执行价接货（极端情况）`,
+    maxProfitHint: "如果 BTC 不跌到执行价，你赚到的上限就是这笔权利金",
+    maxLossText: `$${Math.round(Math.abs(maxLoss)).toLocaleString()}`,
+    maxLossHint: `如果 BTC 跌到 0，你仍要按 $${strike.toLocaleString()} 接货（极端情况）`,
     breakEvenText: `$${Math.round(breakEven).toLocaleString()}`,
-    breakEvenHint: `BTC 跌到这个价格，你接货的实际成本等于现价`,
+    breakEvenHint: "BTC 跌到这个价格，接货成本才与现价持平",
     capitalText: `$${availableCashUsd.toLocaleString()}`,
-    capitalHint: `你准备用来接货的现金`,
+    capitalHint: "你预留出来用于接货的现金",
     riskNature: "下跌接货",
     riskLabel: "中等",
   };
@@ -292,15 +320,30 @@ function buildSyntheticMetrics(rec: SyntheticLongRecommendation, spot: number): 
 
   return {
     maxProfitText: "理论上无限",
-    maxProfitHint: `BTC 涨得越多，买的看涨期权赚得越多`,
+    maxProfitHint: "BTC 涨得越多，买的看涨期权赚得越多",
     maxLossText: `$${rec.pair.downsideObligationUsd.toLocaleString()}+`,
     maxLossHint: `BTC 大跌时，卖的看跌期权让你按 $${putStrike.toLocaleString()} 接货`,
     breakEvenText: `≈ $${Math.round(spot).toLocaleString()}`,
-    breakEvenHint: `因为净权利金接近 0，盈亏平衡价约等于现价`,
-    capitalText: `押金（按需）`,
-    capitalHint: `不需要全额现金，但暴跌时押金会飙升`,
+    breakEvenHint: "因为净权利金接近 0，盈亏平衡价大致在现价附近",
+    capitalText: "押金（按需）",
+    capitalHint: "不需要全额现金，但暴跌时押金会明显上升",
     riskNature: "涨跌都有风险",
     riskLabel: "激进",
+  };
+}
+
+function buildLongCallMetrics(rec: LongCallRecommendation): StrategyMetrics {
+  return {
+    maxProfitText: "理论上无限",
+    maxProfitHint: "BTC 涨得越多，这张 Call 的到期收益上限越高",
+    maxLossText: rec.maxLossUsd != null ? `$${rec.maxLossUsd.toLocaleString()}` : "--",
+    maxLossHint: "最坏情况是这张 Call 到期归零，亏掉全部权利金",
+    breakEvenText: rec.breakEvenPrice != null ? `$${rec.breakEvenPrice.toLocaleString()}` : "--",
+    breakEvenHint: "到期至少涨到这个价位附近，你才真正值回票价",
+    capitalText: rec.premiumPerMinContractUsd != null ? `$${rec.premiumPerMinContractUsd.toLocaleString()}` : "--",
+    capitalHint: "首笔占用资金就是买入这一张 0.1 BTC Call 的权利金",
+    riskNature: "时间价值衰减 + IV 回落",
+    riskLabel: "进取",
   };
 }
 

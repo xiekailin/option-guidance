@@ -8,16 +8,24 @@ interface StrategyFormProps {
   onChange: (next: RecommendationInput) => void;
 }
 
-const riskOptions = [
+const defaultRiskOptions = [
   { value: "conservative", label: "保守", hint: "优先选更不容易被触发的、约定价格更远的" },
   { value: "balanced", label: "平衡", hint: "在租金和安全边际之间折中" },
   { value: "aggressive", label: "进取", hint: "追求更厚的租金，但更容易被触发执行" },
+] as const;
+
+const longCallRiskOptions = [
+  { value: "conservative", label: "保守", hint: "优先选更接近现价、Delta 更高的 Call，赢面更高但权利金更贵" },
+  { value: "balanced", label: "平衡", hint: "在上涨弹性、兑现概率和权利金成本之间折中" },
+  { value: "aggressive", label: "进取", hint: "允许更轻度 OTM 的 Call，成本更低，但更依赖 BTC 快速上涨" },
 ] as const;
 
 export function StrategyForm({ input, onChange }: StrategyFormProps) {
   const errors = validateRecommendationInput(input);
   const assignmentLocked = input.strategy === "cash-secured-put";
   const isSyntheticMode = input.strategy === "synthetic-long";
+  const isLongCallMode = input.strategy === "long-call";
+  const riskOptions = isLongCallMode ? longCallRiskOptions : defaultRiskOptions;
 
   return (
     <section className="rounded-3xl border border-white/10 bg-slate-950/75 p-6 shadow-lg shadow-black/10">
@@ -27,7 +35,9 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
         <p className="mt-2 text-sm leading-6 text-slate-300">
           {isSyntheticMode
             ? "页面会根据你的周期偏好、可用现金和风险偏好，实时筛出更适合的买看涨 + 卖看跌，强烈看涨的组合。"
-            : "页面会根据你的持仓、可用资金、周期偏好和风险偏好，实时筛出更适合的持有 BTC 卖看涨，或卖看跌准备接货。"}
+            : isLongCallMode
+              ? "页面会根据你的可用现金和风险偏好，筛出更适合用 30-90 天 BTC Call 表达中期看涨观点的仓位。"
+              : "页面会根据你的持仓、可用资金、周期偏好和风险偏好，实时筛出更适合的持有 BTC 卖看涨，或卖看跌准备接货。"}
         </p>
       </div>
 
@@ -56,17 +66,26 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
               description="买看涨 + 卖看跌的强烈看涨组合"
               onClick={() => onChange({ ...input, strategy: "synthetic-long", acceptAssignment: true })}
             />
+            <ToggleButton
+              active={input.strategy === "long-call"}
+              title="佩洛西打法"
+              subtitle="Long Call"
+              description="买 30-90 天 BTC Call，用有限亏损换上涨弹性"
+              onClick={() => onChange({ ...input, strategy: "long-call", acceptAssignment: false, cycle: "monthly" })}
+            />
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <NumberField
-            label="可用 BTC"
-            value={input.availableBtc}
-            step="0.001"
-            onChange={(value) => onChange({ ...input, availableBtc: value })}
-          />
-        </div>
+        {!isLongCallMode ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <NumberField
+              label="可用 BTC"
+              value={input.availableBtc}
+              step="0.001"
+              onChange={(value) => onChange({ ...input, availableBtc: value })}
+            />
+          </div>
+        ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <NumberField
@@ -75,34 +94,48 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
             step="100"
             onChange={(value) => onChange({ ...input, availableCashUsd: value })}
           />
-          {!isSyntheticMode ? (
+          {isSyntheticMode ? (
+            <StaticInfoField
+              label="净权利金目标"
+              value="尽量接近 0"
+              hint="模型会优先找卖看跌赚的钱能覆盖买看涨成本的组合，但这不代表无风险。"
+            />
+          ) : isLongCallMode ? (
+            <StaticInfoField
+              label="最大亏损"
+              value="权利金 = 全部风险"
+              hint="你买入的是权利，最坏情况就是这张 Call 到期归零，亏掉全部权利金。"
+            />
+          ) : (
             <NumberField
               label="最低单期权利金 %"
               value={input.minPremiumPercent}
               step="0.1"
               onChange={(value) => onChange({ ...input, minPremiumPercent: value })}
             />
-          ) : (
-            <StaticInfoField
-              label="净权利金目标"
-              value="尽量接近 0"
-              hint="模型会优先找卖看跌赚的钱能覆盖买看涨成本的组合，但这不代表无风险。"
-            />
           )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <SelectField
-            label="周期偏好"
-            value={input.cycle}
-            options={[
-              { value: "weekly", label: isSyntheticMode ? "周度组合" : "周度收租" },
-              { value: "monthly", label: isSyntheticMode ? "月度组合" : "月度收租" },
-            ]}
-            onChange={(value) =>
-              onChange({ ...input, cycle: value as RecommendationInput["cycle"] })
-            }
-          />
+          {isLongCallMode ? (
+            <StaticInfoField
+              label="到期范围"
+              value="固定筛选 30-90 天"
+              hint="这是这次“佩洛西打法”的产品定义：用相对长周期的 BTC Call 表达中期看涨观点。"
+            />
+          ) : (
+            <SelectField
+              label="周期偏好"
+              value={input.cycle}
+              options={[
+                { value: "weekly", label: isSyntheticMode ? "周度组合" : "周度收租" },
+                { value: "monthly", label: isSyntheticMode ? "月度组合" : "月度收租" },
+              ]}
+              onChange={(value) =>
+                onChange({ ...input, cycle: value as RecommendationInput["cycle"] })
+              }
+            />
+          )}
           {assignmentLocked ? (
             <StaticInfoField
               label="接受被动接货"
@@ -114,6 +147,12 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
               label="下跌义务"
               value="必须接受"
               hint="这个策略的核心风险来自卖出的看跌期权；即使买了看涨，也不能抵消暴跌时被迫买入和追加押金的压力。"
+            />
+          ) : isLongCallMode ? (
+            <StaticInfoField
+              label="展期方式"
+              value="首版不自动滚动"
+              hint="临近到期时需要你自己决定平仓、展期或放弃，当前页面只负责帮你选仓和看风险。"
             />
           ) : (
             <SelectField

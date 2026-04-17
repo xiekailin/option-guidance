@@ -6,13 +6,13 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: "http://localhost:3456",
     headless: true,
     trace: "on-first-retry",
   },
   webServer: {
-    command: "npm run dev -- --webpack --port 3000",
-    url: "http://localhost:3000/option-guidance",
+    command: "npm run dev",
+    url: "http://localhost:3456/option-guidance",
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
   },

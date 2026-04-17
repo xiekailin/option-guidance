@@ -71,7 +71,7 @@ function findBreakEven(points: PayoffPoint[]): number | null {
 }
 
 export function buildPayoffLegsForStrategy(
-  strategy: "covered-call" | "cash-secured-put" | "synthetic-long",
+  strategy: "covered-call" | "cash-secured-put" | "synthetic-long" | "long-call",
   strike: number,
   premiumPerBtc: number,
   underlyingPrice: number,
@@ -89,6 +89,12 @@ export function buildPayoffLegsForStrategy(
   if (strategy === "cash-secured-put") {
     return [
       { direction: "short", optionType: "put", strike, premium: premiumPerBtc, contractSize },
+    ];
+  }
+
+  if (strategy === "long-call") {
+    return [
+      { direction: "long", optionType: "call", strike, premium: premiumPerBtc, contractSize },
     ];
   }
 

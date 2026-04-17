@@ -6,6 +6,8 @@ import { Activity, AlertTriangle, BookOpen, HelpCircle, RefreshCw } from "lucide
 import { Dialog } from "@/components/ui/dialog";
 import { RecommendationSummary } from "@/components/dashboard/recommendation-summary";
 import { OptionDetailDrawer } from "@/components/recommendation/option-detail-drawer";
+import { LongCallDetailDrawer } from "@/components/recommendation/long-call-detail-drawer";
+import { LongCallRecommendationTable } from "@/components/recommendation/long-call-recommendation-table";
 import { OptionsRecommendationTable } from "@/components/recommendation/options-recommendation-table";
 import { StrategyForm } from "@/components/strategy/strategy-form";
 import { PayoffCalculator } from "@/components/dashboard/payoff-calculator";
@@ -18,12 +20,14 @@ import {
   buildSyntheticLongRecommendations,
   getSyntheticLongMethodology,
 } from "@/lib/domain/synthetic-long";
+import { buildLongCallRecommendations, getLongCallMethodology } from "@/lib/domain/long-call";
 import { analyzeMarketOverview } from "@/lib/domain/market-analysis";
 import { analyzeVolatility } from "@/lib/domain/volatility";
 import { fetchBtcHistoricalSeries, fetchBtcTicker, fetchOptionsChain } from "@/lib/market/deribit-client";
 import { validateRecommendationInput } from "@/lib/domain/calculations";
 import type {
   ExpiryPayoff,
+  LongCallRecommendation,
   Recommendation,
   RecommendationInput,
   SyntheticLongRecommendation,
@@ -41,10 +45,12 @@ const defaultInput: RecommendationInput = {
 
 type StandardMethodology = ReturnType<typeof getRecommendationMethodology>;
 type SyntheticMethodology = ReturnType<typeof getSyntheticLongMethodology>;
+type LongCallMethodology = ReturnType<typeof getLongCallMethodology>;
 
 export function OptionsDashboard() {
   const [input, setInput] = useState<RecommendationInput>(defaultInput);
   const [selected, setSelected] = useState<Recommendation | null>(null);
+  const [selectedLongCall, setSelectedLongCall] = useState<LongCallRecommendation | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("recommendations");
   const [showMethodology, setShowMethodology] = useState(false);
   const [showReadingGuide, setShowReadingGuide] = useState(false);
@@ -82,37 +88,84 @@ export function OptionsDashboard() {
 
   const inputErrors = useMemo(() => validateRecommendationInput(input), [input]);
   const isSyntheticMode = input.strategy === "synthetic-long";
-  const standardRecommendations = useMemo(
-    () => (!isSyntheticMode && inputErrors.length === 0 ? buildRecommendations(chain?.options ?? [], input) : []),
-    [isSyntheticMode, chain?.options, input, inputErrors.length],
+  const isLongCallMode = input.strategy === "long-call";
+  const coveredCallInput = useMemo(
+    () => ({ ...input, strategy: "covered-call" as const }),
+    [input],
   );
+  const cashSecuredPutInput = useMemo(
+    () => ({ ...input, strategy: "cash-secured-put" as const, acceptAssignment: true }),
+    [input],
+  );
+  const syntheticLongInput = useMemo(
+    () => ({ ...input, strategy: "synthetic-long" as const, acceptAssignment: true }),
+    [input],
+  );
+  const longCallInput = useMemo(
+    () => ({ ...input, strategy: "long-call" as const, acceptAssignment: false, cycle: "monthly" as const }),
+    [input],
+  );
+  const coveredCallRecommendations = useMemo(
+    () => buildRecommendations(chain?.options ?? [], coveredCallInput),
+    [chain?.options, coveredCallInput],
+  );
+  const cashSecuredPutRecommendations = useMemo(
+    () => buildRecommendations(chain?.options ?? [], cashSecuredPutInput),
+    [chain?.options, cashSecuredPutInput],
+  );
+  const allSyntheticRecommendations = useMemo(
+    () => buildSyntheticLongRecommendations(chain?.options ?? [], syntheticLongInput),
+    [chain?.options, syntheticLongInput],
+  );
+  const allLongCallRecommendations = useMemo(
+    () => buildLongCallRecommendations(chain?.options ?? [], longCallInput),
+    [chain?.options, longCallInput],
+  );
+  const standardRecommendations = useMemo(() => {
+    if (isSyntheticMode || isLongCallMode || inputErrors.length > 0) {
+      return [];
+    }
+
+    return input.strategy === "covered-call" ? coveredCallRecommendations : cashSecuredPutRecommendations;
+  }, [cashSecuredPutRecommendations, coveredCallRecommendations, input.strategy, inputErrors.length, isLongCallMode, isSyntheticMode]);
   const syntheticRecommendations = useMemo(
-    () => (isSyntheticMode && inputErrors.length === 0 ? buildSyntheticLongRecommendations(chain?.options ?? [], input) : []),
-    [isSyntheticMode, chain?.options, input, inputErrors.length],
+    () => (isSyntheticMode && inputErrors.length === 0 ? allSyntheticRecommendations : []),
+    [allSyntheticRecommendations, inputErrors.length, isSyntheticMode],
+  );
+  const longCallRecommendations = useMemo(
+    () => (isLongCallMode && inputErrors.length === 0 ? allLongCallRecommendations : []),
+    [allLongCallRecommendations, inputErrors.length, isLongCallMode],
   );
   const standardMethodology = useMemo(() => getRecommendationMethodology(input), [input]);
-  const syntheticMethodology = useMemo(() => getSyntheticLongMethodology(input), [input]);
+  const syntheticMethodology = useMemo(() => getSyntheticLongMethodology(syntheticLongInput), [syntheticLongInput]);
+  const longCallMethodology = useMemo(() => getLongCallMethodology(longCallInput), [longCallInput]);
   const volatility = useMemo(
     () => analyzeVolatility(chain?.options ?? [], ticker?.price ?? null, historicalSeries?.points ?? []),
     [chain?.options, historicalSeries?.points, ticker?.price],
   );
-  const marketOverview = useMemo(() => {
-    if (!ticker?.price || !(chain?.options?.length)) {
-      return null;
-    }
-
-    return analyzeMarketOverview({
-      currentPrice: ticker.price,
-      historicalPrices: historicalSeries?.points ?? [],
-      options: chain.options,
-      volatility,
-    });
-  }, [chain?.options, historicalSeries?.points, ticker?.price, volatility]);
+  const marketOverview = !ticker?.price || !(chain?.options?.length)
+    ? null
+    : analyzeMarketOverview({
+        currentPrice: ticker.price,
+        historicalPrices: historicalSeries?.points ?? [],
+        options: chain.options,
+        volatility,
+      });
   const handleTabChange = useCallback((tab: TabKey) => setActiveTab(tab), []);
   const handleSelectRecommendation = useCallback((recommendation: Recommendation) => setSelected(recommendation), []);
-  const topRecommendation = isSyntheticMode ? undefined : standardRecommendations[0];
-  const topSyntheticRecommendation = isSyntheticMode ? syntheticRecommendations[0] : undefined;
-  const totalCount = isSyntheticMode ? syntheticRecommendations.length : standardRecommendations.length;
+  const handleSelectLongCall = useCallback((recommendation: LongCallRecommendation) => setSelectedLongCall(recommendation), []);
+  const topCoveredCallRecommendation = coveredCallRecommendations[0];
+  const topCashSecuredPutRecommendation = cashSecuredPutRecommendations[0];
+  const topRecommendation = !isSyntheticMode && !isLongCallMode ? standardRecommendations[0] : undefined;
+  const topSyntheticRecommendation = isSyntheticMode && inputErrors.length === 0 ? syntheticRecommendations[0] : undefined;
+  const topLongCallRecommendation = isLongCallMode && inputErrors.length === 0 ? longCallRecommendations[0] : undefined;
+  const comparisonSyntheticRecommendation = allSyntheticRecommendations[0];
+  const comparisonLongCallRecommendation = allLongCallRecommendations[0];
+  const totalCount = isSyntheticMode
+    ? syntheticRecommendations.length
+    : isLongCallMode
+      ? longCallRecommendations.length
+      : standardRecommendations.length;
   const isLoading = tickerLoading || chainLoading;
   const isValidating = tickerValidating || chainValidating;
   const hasError = tickerError || chainError;
@@ -136,7 +189,12 @@ export function OptionsDashboard() {
               <span className="text-slate-500">BTC</span>{" "}
               <span className="font-semibold text-white">{ticker?.price ? `$${ticker.price.toLocaleString()}` : "..."}</span>
             </span>
-            <StrategySegmentedControl strategy={input.strategy} onChange={(s) => setInput({ ...input, strategy: s, ...(s === "cash-secured-put" || s === "synthetic-long" ? { acceptAssignment: true } : {}) })} />
+            <StrategySegmentedControl strategy={input.strategy} onChange={(s) => setInput({
+              ...input,
+              strategy: s,
+              ...(s === "cash-secured-put" || s === "synthetic-long" ? { acceptAssignment: true } : { acceptAssignment: false }),
+              ...(s === "long-call" ? { cycle: "monthly" } : {}),
+            })} />
             <button
               type="button"
               onClick={() => { void refreshTicker(); void refreshChain(); }}
@@ -150,9 +208,11 @@ export function OptionsDashboard() {
 
         {/* 摘要卡片 */}
         <RecommendationSummary
+          strategy={input.strategy}
           price={ticker?.price}
           recommendation={topRecommendation}
           syntheticRecommendation={topSyntheticRecommendation}
+          longCallRecommendation={topLongCallRecommendation}
           total={totalCount}
           source={chain?.source ?? ticker?.source}
           updatedAt={chain?.updatedAt ?? ticker?.updatedAt}
@@ -205,9 +265,13 @@ export function OptionsDashboard() {
                     </button>
                   </div>
 
+                  {isLongCallMode ? <LongCallStoryPanel /> : null}
+
                   {/* 首选建议 */}
                   {isSyntheticMode ? (
                     <TopSyntheticPanel recommendation={topSyntheticRecommendation} />
+                  ) : isLongCallMode ? (
+                    <TopLongCallPanel recommendation={topLongCallRecommendation} />
                   ) : (
                     <TopRecommendationPanel recommendation={topRecommendation} strategy={input.strategy} />
                   )}
@@ -221,6 +285,11 @@ export function OptionsDashboard() {
                     <ErrorPanel title="输入需要修正" message={inputErrors.join(" ")} />
                   ) : isSyntheticMode ? (
                     <SyntheticRecommendationList recommendations={syntheticRecommendations} />
+                  ) : isLongCallMode ? (
+                    <LongCallRecommendationTable
+                      recommendations={longCallRecommendations}
+                      onSelect={handleSelectLongCall}
+                    />
                   ) : (
                     <OptionsRecommendationTable
                       recommendations={standardRecommendations}
@@ -232,18 +301,22 @@ export function OptionsDashboard() {
             )}
 
             {/* 结果解读弹框 */}
-            <Dialog open={showReadingGuide} onClose={() => setShowReadingGuide(false)} title={isSyntheticMode ? "这张组合怎么读" : "推荐结果怎么读"}>
+            <Dialog open={showReadingGuide} onClose={() => setShowReadingGuide(false)} title={isSyntheticMode ? "这张组合怎么读" : isLongCallMode ? "这张 Call 怎么读" : "推荐结果怎么读"}>
               {isSyntheticMode ? (
                 <SyntheticInterpretationPanel methodology={syntheticMethodology} recommendation={topSyntheticRecommendation} />
+              ) : isLongCallMode ? (
+                <LongCallInterpretationPanel methodology={longCallMethodology} recommendation={topLongCallRecommendation} />
               ) : (
                 <ResultInterpretationPanel methodology={standardMethodology} recommendation={topRecommendation} />
               )}
             </Dialog>
 
             {/* 算法说明弹框 */}
-            <Dialog open={showMethodology} onClose={() => setShowMethodology(false)} title={isSyntheticMode ? "组合算法说明" : "算法说明"}>
+            <Dialog open={showMethodology} onClose={() => setShowMethodology(false)} title={isSyntheticMode ? "组合算法说明" : isLongCallMode ? "佩洛西打法说明" : "算法说明"}>
               {isSyntheticMode ? (
                 <SyntheticMethodologyPanel methodology={syntheticMethodology} />
+              ) : isLongCallMode ? (
+                <LongCallMethodologyPanel methodology={longCallMethodology} />
               ) : (
                 <MethodologyPanel methodology={standardMethodology} />
               )}
@@ -251,7 +324,11 @@ export function OptionsDashboard() {
 
             {activeTab === "calculator" && (
               <PayoffCalculator
-                selectedContract={selected?.contract ?? null}
+                selectedContract={isLongCallMode
+                  ? selectedLongCall?.contract ?? topLongCallRecommendation?.contract ?? null
+                  : isSyntheticMode
+                    ? topSyntheticRecommendation?.pair.call ?? null
+                    : selected?.contract ?? topRecommendation?.contract ?? null}
                 syntheticPut={isSyntheticMode ? topSyntheticRecommendation?.pair.put : undefined}
                 underlyingPrice={ticker?.price}
                 strategy={input.strategy}
@@ -264,8 +341,10 @@ export function OptionsDashboard() {
               <StrategyComparison
                 strategy={input.strategy}
                 underlyingPrice={ticker?.price}
-                recommendation={topRecommendation}
-                syntheticRecommendation={topSyntheticRecommendation}
+                coveredCallRecommendation={topCoveredCallRecommendation}
+                cashSecuredPutRecommendation={topCashSecuredPutRecommendation}
+                syntheticRecommendation={comparisonSyntheticRecommendation}
+                longCallRecommendation={comparisonLongCallRecommendation}
                 availableBtc={input.availableBtc}
                 availableCashUsd={input.availableCashUsd}
               />
@@ -288,29 +367,21 @@ export function OptionsDashboard() {
         </div>
       </div>
 
-      {!isSyntheticMode ? (
+      {!isSyntheticMode && !isLongCallMode ? (
         <OptionDetailDrawer recommendation={selected} onClose={() => setSelected(null)} />
+      ) : null}
+      {isLongCallMode ? (
+        <LongCallDetailDrawer recommendation={selectedLongCall} onClose={() => setSelectedLongCall(null)} />
       ) : null}
     </div>
   );
-}
-
-function getStrategyModeLabel(strategy: RecommendationInput["strategy"]): string {
-  switch (strategy) {
-    case "cash-secured-put":
-      return "卖看跌准备接货 (Cash-Secured Put)";
-    case "synthetic-long":
-      return "模拟持有 BTC (Synthetic Long)";
-    case "covered-call":
-    default:
-      return "持有 BTC 卖看涨 (Covered Call)";
-  }
 }
 
 const strategyOptions = [
   { value: "covered-call" as const, label: "卖看涨", shortLabel: "CC" },
   { value: "cash-secured-put" as const, label: "卖看跌", shortLabel: "CSP" },
   { value: "synthetic-long" as const, label: "合成现货", shortLabel: "SL" },
+  { value: "long-call" as const, label: "佩洛西打法", shortLabel: "PL" },
 ];
 
 function StrategySegmentedControl({
@@ -333,7 +404,9 @@ function StrategySegmentedControl({
               isActive
                 ? opt.value === "synthetic-long"
                   ? "bg-fuchsia-400/20 text-fuchsia-200"
-                  : "bg-cyan-400/20 text-cyan-200"
+                  : opt.value === "long-call"
+                    ? "bg-emerald-400/20 text-emerald-200"
+                    : "bg-cyan-400/20 text-cyan-200"
                 : "text-slate-500 hover:text-slate-300"
             }`}
           >
@@ -344,18 +417,6 @@ function StrategySegmentedControl({
       })}
     </div>
   );
-}
-
-function getTabLabel(tab: TabKey): string {
-  const map: Record<TabKey, string> = {
-    market: "市场概览",
-    recommendations: "策略推荐",
-    calculator: "损益计算",
-    comparison: "策略对比",
-    volatility: "波动率",
-    risk: "风险提示",
-  };
-  return map[tab];
 }
 
 function getDisplayErrorMessage(tickerError: unknown, chainError: unknown): string {
@@ -441,6 +502,36 @@ function TopSyntheticPanel({ recommendation }: { recommendation: SyntheticLongRe
           <MiniMetric label="净权利金" value={formatUsdAmount(recommendation.pair.netPremiumUsdPerMinContract)} />
           <MiniMetric label="可做最大张数" value={`${recommendation.maxLots}`} />
           <MiniMetric label="名义 BTC" value={`${recommendation.maxTradeAmountBtc} BTC`} />
+        </div>
+      </div>
+
+      <ExpiryPayoffCard payoff={recommendation.expiryPayoff} />
+    </section>
+  );
+}
+
+function TopLongCallPanel({ recommendation }: { recommendation: LongCallRecommendation | undefined }) {
+  if (!recommendation) {
+    return (
+      <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-sm leading-7 text-slate-400">
+        暂时没有满足你条件的佩洛西打法候选。你可以提高可用现金，或者把风险偏好从保守调到平衡/进取试试。
+      </div>
+    );
+  }
+
+  return (
+    <section className="rounded-3xl border border-white/10 bg-slate-950/80 p-5 shadow-lg shadow-black/10">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="max-w-3xl">
+          <div className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[11px] text-emerald-200">当前首选 Call</div>
+          <h2 className="mt-3 text-xl font-semibold text-white">{recommendation.contract.instrumentName}</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-300">{recommendation.summary}</p>
+        </div>
+        <div className="grid gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-200 sm:grid-cols-2 md:min-w-[340px]">
+          <MiniMetric label="评分" value={`${recommendation.score}`} />
+          <MiniMetric label="单张权利金" value={formatUsdAmount(recommendation.premiumPerMinContractUsd)} />
+          <MiniMetric label="最大亏损" value={formatUsdAmount(recommendation.maxLossUsd)} />
+          <MiniMetric label="盈亏平衡" value={recommendation.breakEvenPrice != null ? `$${recommendation.breakEvenPrice.toLocaleString()}` : "--"} />
         </div>
       </div>
 
@@ -551,6 +642,57 @@ function SyntheticInterpretationPanel({
   );
 }
 
+function LongCallInterpretationPanel({
+  methodology,
+  recommendation,
+}: {
+  methodology: LongCallMethodology;
+  recommendation: LongCallRecommendation | undefined;
+}) {
+  return (
+    <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr_1fr]">
+      <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
+        <p className="text-sm font-medium text-white">这轮 Call 先怎么筛</p>
+        <div className="mt-4 space-y-3">
+          {methodology.filters.map((item) => (
+            <div key={item.label} className="rounded-2xl border border-white/8 bg-slate-950/35 px-4 py-3">
+              <p className="text-sm font-medium text-slate-200">{item.label}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-400">{item.description}</p>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
+        <p className="text-sm font-medium text-white">这张 Call 怎么读</p>
+        <div className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
+          <ReadingHint label="单张权利金" description="这是你入场时付出的全部成本，也是这张票理论上的最大亏损。" />
+          <ReadingHint label="盈亏平衡价" description="BTC 到期至少要涨到这个价位附近，你才开始真正值回票价。" />
+          <ReadingHint label="Delta" description="越高越接近现货替代，越低越偏赔率更大但更依赖大涨。" />
+          <ReadingHint label="30-90 天" description="这是本次产品定义里的相对长周期，不是超短线赌方向。" />
+        </div>
+      </article>
+
+      <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
+        <p className="text-sm font-medium text-white">为什么它不是稳赚看涨</p>
+        <p className="mt-4 text-sm leading-7 text-slate-300">
+          {recommendation?.summary ?? "你买的是上涨弹性，不是确定性收益。方向看对但时点不对，时间价值和 IV 回落也会让你亏钱。"}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {methodology.scoring.map((item) => (
+            <span
+              key={item.label}
+              className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-100"
+            >
+              {item.label} {item.weightPercent}%
+            </span>
+          ))}
+        </div>
+      </article>
+    </section>
+  );
+}
+
 function MethodologyPanel({ methodology }: { methodology: StandardMethodology }) {
   return (
     <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
@@ -648,6 +790,90 @@ function SyntheticMethodologyPanel({ methodology }: { methodology: SyntheticMeth
       <div className="mt-6 rounded-3xl border border-rose-400/20 bg-rose-400/10 p-5">
         <p className="text-sm font-medium text-rose-100">模型边界</p>
         <ul className="mt-3 space-y-3 text-sm leading-7 text-rose-50/90">
+          {methodology.notes.map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function LongCallStoryPanel() {
+  return (
+    <section className="rounded-3xl border border-emerald-400/20 bg-emerald-400/5 p-5">
+      <div className="max-w-4xl">
+        <p className="text-sm font-medium text-emerald-200">佩洛西打法是什么</p>
+        <p className="mt-3 text-sm leading-7 text-slate-200">
+          这里说的“佩洛西打法”，本质上不是收租，也不是神秘内幕模板，而是用一张相对长一点的 BTC Call，去表达中期看涨判断：先把最大亏损锁在权利金里，等行情自己走出来。
+        </p>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-slate-950/40 p-4 text-sm leading-7 text-emerald-50/95">
+        <p className="font-medium text-emerald-100">大白话讲解</p>
+        <ul className="mt-2 space-y-2">
+          <li>- 你不是在收租，你是在花一笔可见的门票钱，买未来一段时间 BTC 上涨的弹性。</li>
+          <li>- 涨得够快、够猛，这张票会明显升值；涨得太慢，票也可能一天天缩水。</li>
+          <li>- 最坏情况不是“无限亏”，而是这张 Call 到期没价值，你亏掉整张票的钱。</li>
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function LongCallMethodologyPanel({ methodology }: { methodology: LongCallMethodology }) {
+  return (
+    <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+      <div className="max-w-3xl">
+        <p className="text-sm font-medium text-white">佩洛西打法说明</p>
+        <p className="mt-3 text-sm leading-7 text-slate-300">
+          这里说的“佩洛西打法”，不是神秘秘籍，而是把民间常说的“买长一点的看涨期权，方向对了就吃上涨弹性，临近到期再决定走不走”标准化成一个 BTC 版本。
+        </p>
+      </div>
+
+      <div className="mt-6 rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5 text-sm leading-7 text-emerald-50/95">
+        <p className="font-medium text-emerald-100">大白话解释</p>
+        <ul className="mt-3 space-y-2">
+          <li>- 你不是在收租，而是在花一笔看得见的成本，买未来一段时间 BTC 上涨的弹性。</li>
+          <li>- 它像是“先花小钱买一个看涨门票”，涨得快、涨得够多，这张门票就值钱。</li>
+          <li>- 如果 BTC 不涨、涨得太慢，或者波动率回落，这张票就会慢慢缩水，最坏情况直接归零。</li>
+        </ul>
+      </div>
+
+      <div className="mt-6 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">第一步：过滤掉不合格 Call</p>
+          <div className="mt-4 grid gap-3">
+            {methodology.filters.map((item) => (
+              <article key={item.label} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+                <p className="text-sm font-medium text-white">{item.label}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-400">{item.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">第二步：给候选 Call 打分</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {methodology.scoring.map((item) => (
+              <article key={item.label} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-white">{item.label}</p>
+                  <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-xs text-emerald-100">
+                    权重 {item.weightPercent}%
+                  </span>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-slate-400">{item.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-3xl border border-amber-400/20 bg-amber-400/10 p-5">
+        <p className="text-sm font-medium text-amber-100">模型边界</p>
+        <ul className="mt-3 space-y-3 text-sm leading-7 text-amber-50/90">
           {methodology.notes.map((note) => (
             <li key={note}>{note}</li>
           ))}
@@ -863,11 +1089,17 @@ function RiskPanel({ strategy }: { strategy: RecommendationInput["strategy"] }) 
             "低触发概率只能降低被迫接货的可能性，不代表你不会接货。",
             "高波动率预期确实让租金更厚，但通常也意味着市场预期接下来波动更大。",
           ]
-        : [
-            "模拟持有 BTC 的组合不是稳定收租，而是强烈看涨的操作。",
-            "暴跌时风险主要来自卖出的看跌期权，下跌时的亏损会明显大于只买看涨期权。",
-            "如果账户不是全现金担保，还要额外考虑押金波动和追加押金的压力。",
-          ];
+        : strategy === "long-call"
+          ? [
+              "佩洛西打法的最大亏损虽然锁定在权利金，但这笔亏损仍可能是 100% 权利金，不能把“有限亏损”理解成“亏不多”。",
+              "方向看对但时间不对也会亏钱；BTC 涨得太慢，时间价值衰减会持续吃掉这张 Call 的价格。",
+              "如果你是在高 IV 环境里买入，后面即使 BTC 没怎么跌，IV 回落也会压缩期权价值。",
+            ]
+          : [
+              "模拟持有 BTC 的组合不是稳定收租，而是强烈看涨的操作。",
+              "暴跌时风险主要来自卖出的看跌期权，下跌时的亏损会明显大于只买看涨期权。",
+              "如果账户不是全现金担保，还要额外考虑押金波动和追加押金的压力。",
+            ];
 
   return (
     <section className="rounded-3xl border border-white/10 bg-white/5 p-6">

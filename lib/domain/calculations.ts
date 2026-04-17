@@ -114,7 +114,7 @@ export function validateRecommendationInput(input: RecommendationInput): string[
     errors.push("可用现金不能小于 0。");
   }
 
-  if (input.strategy === "synthetic-long") {
+  if (input.strategy === "synthetic-long" || input.strategy === "long-call") {
     return errors;
   }
 
