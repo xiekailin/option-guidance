@@ -73,7 +73,7 @@ export const OptionsRecommendationTable = memo(function OptionsRecommendationTab
                   <button
                     type="button"
                     onClick={() => onSelect(item)}
-                    className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-medium text-cyan-100 transition hover:border-cyan-300 hover:bg-cyan-400/20"
+                    className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-200 transition hover:border-cyan-400/30 hover:text-white"
                   >
                     详情
                   </button>

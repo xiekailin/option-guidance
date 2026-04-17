@@ -145,8 +145,8 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
                   }
                   className={`rounded-2xl border p-4 text-left transition ${
                     active
-                      ? "border-cyan-400 bg-cyan-400/10 text-white shadow-lg shadow-cyan-900/20"
-                      : "border-white/10 bg-slate-900/60 text-slate-300 hover:border-cyan-400/60 hover:bg-slate-900"
+                      ? "border-cyan-400/50 bg-slate-900 text-white shadow-sm shadow-cyan-950/20"
+                      : "border-white/10 bg-slate-900/60 text-slate-300 hover:border-cyan-400/40 hover:bg-slate-900"
                   }`}
                 >
                   <div className="font-medium">{option.label}</div>
@@ -158,7 +158,7 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
         </div>
 
         {isSyntheticMode ? (
-          <div className="rounded-2xl border border-fuchsia-400/20 bg-fuchsia-400/10 p-4 text-sm leading-6 text-fuchsia-50/95">
+          <div className="rounded-2xl border border-fuchsia-400/20 bg-slate-950/70 p-4 text-sm leading-6 text-fuchsia-50/95">
             <p className="font-medium text-fuchsia-100">合成现货模式提示</p>
             <ul className="mt-2 space-y-1">
               <li>- 这是方向性强看涨组合，不是稳定收租。</li>

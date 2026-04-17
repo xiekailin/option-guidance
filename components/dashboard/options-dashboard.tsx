@@ -11,12 +11,15 @@ import { StrategyForm } from "@/components/strategy/strategy-form";
 import { PayoffCalculator } from "@/components/dashboard/payoff-calculator";
 import { StrategyComparison } from "@/components/dashboard/strategy-comparison";
 import { VolatilityPanel } from "@/components/dashboard/volatility-panel";
+import { MarketOverviewPanel } from "@/components/dashboard/market-overview-panel";
 import { PageSidebar, PageTabs, type TabKey } from "@/components/dashboard/page-sidebar";
 import { buildRecommendations, getRecommendationMethodology } from "@/lib/domain/recommendation";
 import {
   buildSyntheticLongRecommendations,
   getSyntheticLongMethodology,
 } from "@/lib/domain/synthetic-long";
+import { analyzeMarketOverview } from "@/lib/domain/market-analysis";
+import { analyzeVolatility } from "@/lib/domain/volatility";
 import { fetchBtcHistoricalSeries, fetchBtcTicker, fetchOptionsChain } from "@/lib/market/deribit-client";
 import { validateRecommendationInput } from "@/lib/domain/calculations";
 import type {
@@ -89,6 +92,22 @@ export function OptionsDashboard() {
   );
   const standardMethodology = useMemo(() => getRecommendationMethodology(input), [input]);
   const syntheticMethodology = useMemo(() => getSyntheticLongMethodology(input), [input]);
+  const volatility = useMemo(
+    () => analyzeVolatility(chain?.options ?? [], ticker?.price ?? null, historicalSeries?.points ?? []),
+    [chain?.options, historicalSeries?.points, ticker?.price],
+  );
+  const marketOverview = useMemo(() => {
+    if (!ticker?.price || !(chain?.options?.length)) {
+      return null;
+    }
+
+    return analyzeMarketOverview({
+      currentPrice: ticker.price,
+      historicalPrices: historicalSeries?.points ?? [],
+      options: chain.options,
+      volatility,
+    });
+  }, [chain?.options, historicalSeries?.points, ticker?.price, volatility]);
   const handleTabChange = useCallback((tab: TabKey) => setActiveTab(tab), []);
   const handleSelectRecommendation = useCallback((recommendation: Recommendation) => setSelected(recommendation), []);
   const topRecommendation = isSyntheticMode ? undefined : standardRecommendations[0];
@@ -113,7 +132,7 @@ export function OptionsDashboard() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm">
+            <span className="rounded-lg border border-white/10 bg-slate-950/70 px-3 py-1.5 text-sm shadow-sm shadow-black/10">
               <span className="text-slate-500">BTC</span>{" "}
               <span className="font-semibold text-white">{ticker?.price ? `$${ticker.price.toLocaleString()}` : "..."}</span>
             </span>
@@ -121,7 +140,7 @@ export function OptionsDashboard() {
             <button
               type="button"
               onClick={() => { void refreshTicker(); void refreshChain(); }}
-              className="rounded-lg border border-white/10 bg-white/5 p-2 text-slate-400 transition hover:border-cyan-400/30 hover:text-white"
+              className="rounded-lg border border-white/10 bg-slate-950/70 p-2 text-slate-400 transition hover:border-cyan-400/30 hover:text-white"
               title="刷新数据"
             >
               <RefreshCw className={`size-3.5 ${isValidating ? "animate-spin" : ""}`} />
@@ -137,6 +156,9 @@ export function OptionsDashboard() {
           total={totalCount}
           source={chain?.source ?? ticker?.source}
           updatedAt={chain?.updatedAt ?? ticker?.updatedAt}
+          marketLevel={marketOverview?.brief.title}
+          marketHint={marketOverview?.brief.riskNote}
+          adviceLabel={marketOverview?.advice.label}
         />
 
         {/* 移动端标签 + 桌面端侧边栏 */}
@@ -146,6 +168,16 @@ export function OptionsDashboard() {
           <PageSidebar activeTab={activeTab} onTabChange={handleTabChange} />
 
           <div className="min-w-0 flex-1 space-y-5">
+            {activeTab === "market" && (
+              <MarketOverviewPanel
+                underlyingPrice={ticker?.price}
+                volatility={volatility}
+                overview={marketOverview}
+                historicalLoading={historicalLoading}
+                historicalError={Boolean(historicalError)}
+              />
+            )}
+
             {activeTab === "recommendations" && (
               <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
                 <section>
@@ -158,7 +190,7 @@ export function OptionsDashboard() {
                     <button
                       type="button"
                       onClick={() => setShowReadingGuide(true)}
-                      className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300 transition hover:border-cyan-400/30 hover:text-white"
+                      className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-xs text-slate-300 transition hover:border-cyan-400/30 hover:text-white"
                     >
                       <HelpCircle className="size-3.5" />
                       结果解读
@@ -166,7 +198,7 @@ export function OptionsDashboard() {
                     <button
                       type="button"
                       onClick={() => setShowMethodology(true)}
-                      className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300 transition hover:border-cyan-400/30 hover:text-white"
+                      className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-xs text-slate-300 transition hover:border-cyan-400/30 hover:text-white"
                     >
                       <BookOpen className="size-3.5" />
                       算法说明
@@ -289,7 +321,7 @@ function StrategySegmentedControl({
   onChange: (strategy: RecommendationInput["strategy"]) => void;
 }) {
   return (
-    <div className="inline-flex rounded-lg border border-white/10 bg-white/5 p-0.5">
+    <div className="inline-flex rounded-lg border border-white/10 bg-slate-950/70 p-0.5 shadow-sm shadow-black/10">
       {strategyOptions.map((opt) => {
         const isActive = opt.value === strategy;
         return (
@@ -316,6 +348,7 @@ function StrategySegmentedControl({
 
 function getTabLabel(tab: TabKey): string {
   const map: Record<TabKey, string> = {
+    market: "市场概览",
     recommendations: "策略推荐",
     calculator: "损益计算",
     comparison: "策略对比",
@@ -361,12 +394,12 @@ function TopRecommendationPanel({
   }
 
   return (
-    <section className="rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-5 shadow-2xl shadow-cyan-950/20">
+    <section className="rounded-3xl border border-white/10 bg-slate-950/80 p-5 shadow-lg shadow-black/10">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="max-w-3xl">
-          <p className="text-sm font-medium text-cyan-200">当前首选建议</p>
-          <h2 className="mt-1 text-xl font-semibold text-white">{recommendation.contract.instrumentName}</h2>
-          <p className="mt-2 text-sm leading-6 text-cyan-50/90">{recommendation.summary}</p>
+          <div className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] text-cyan-200">当前首选建议</div>
+          <h2 className="mt-3 text-xl font-semibold text-white">{recommendation.contract.instrumentName}</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-300">{recommendation.summary}</p>
         </div>
         <div className="grid gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-200 sm:grid-cols-2 md:min-w-[340px]">
           <MiniMetric label="评分" value={`${recommendation.score}`} />
@@ -394,14 +427,14 @@ function TopSyntheticPanel({ recommendation }: { recommendation: SyntheticLongRe
   }
 
   return (
-    <section className="rounded-3xl border border-fuchsia-400/20 bg-fuchsia-400/10 p-5 shadow-2xl shadow-fuchsia-950/20">
+    <section className="rounded-3xl border border-white/10 bg-slate-950/80 p-5 shadow-lg shadow-black/10">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="max-w-3xl">
-          <p className="text-sm font-medium text-fuchsia-200">当前首选组合</p>
+          <div className="inline-flex rounded-full border border-fuchsia-400/20 bg-fuchsia-400/10 px-3 py-1 text-[11px] text-fuchsia-200">当前首选组合</div>
           <h2 className="mt-1 text-xl font-semibold text-white">
             买 {recommendation.pair.call.instrumentName} / 卖 {recommendation.pair.put.instrumentName}
           </h2>
-          <p className="mt-2 text-sm leading-6 text-fuchsia-50/90">{recommendation.summary}</p>
+          <p className="mt-2 text-sm leading-6 text-slate-300">{recommendation.summary}</p>
         </div>
         <div className="grid gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-200 sm:grid-cols-2 md:min-w-[340px]">
           <MiniMetric label="评分" value={`${recommendation.score}`} />

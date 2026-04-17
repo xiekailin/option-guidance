@@ -8,6 +8,9 @@ interface RecommendationSummaryProps {
   total: number;
   source?: string;
   updatedAt?: string;
+  marketHint?: string;
+  marketLevel?: string;
+  adviceLabel?: string;
 }
 
 export const RecommendationSummary = memo(function RecommendationSummary({
@@ -17,6 +20,9 @@ export const RecommendationSummary = memo(function RecommendationSummary({
   total,
   source,
   updatedAt,
+  marketHint,
+  marketLevel,
+  adviceLabel,
 }: RecommendationSummaryProps) {
   const cards = syntheticRecommendation
     ? [
@@ -68,10 +74,15 @@ export const RecommendationSummary = memo(function RecommendationSummary({
           value: total.toString(),
           hint: recommendation ? recommendation.level : "等待结果",
         },
+        {
+          label: "系统建议",
+          value: adviceLabel ?? "观察中",
+          hint: marketHint ?? marketLevel ?? "等待市场分析",
+        },
       ];
 
   return (
-    <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
       {cards.map((card) => (
         <article
           key={card.label}
@@ -83,7 +94,7 @@ export const RecommendationSummary = memo(function RecommendationSummary({
         </article>
       ))}
       {updatedAt ? (
-        <p className="text-[11px] text-slate-600 sm:col-span-2 lg:col-span-4">更新于 {new Date(updatedAt).toLocaleString()}</p>
+        <p className="text-[11px] text-slate-600 sm:col-span-2 xl:col-span-5">更新于 {new Date(updatedAt).toLocaleString()}</p>
       ) : null}
     </section>
   );

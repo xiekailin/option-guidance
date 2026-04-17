@@ -1,9 +1,9 @@
 "use client";
 
 import { memo } from "react";
-import { BarChart3, Activity, GitCompareArrows, ShieldAlert, Sparkles } from "lucide-react";
+import { BarChart3, Activity, GitCompareArrows, LineChart, ShieldAlert, Sparkles } from "lucide-react";
 
-export type TabKey = "recommendations" | "calculator" | "comparison" | "volatility" | "risk";
+export type TabKey = "market" | "recommendations" | "calculator" | "comparison" | "volatility" | "risk";
 
 interface NavItem {
   key: TabKey;
@@ -13,6 +13,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { key: "market", label: "市场概览", shortLabel: "市场", icon: <LineChart className="size-4" /> },
   { key: "recommendations", label: "策略推荐", shortLabel: "推荐", icon: <Sparkles className="size-4" /> },
   { key: "calculator", label: "损益计算", shortLabel: "损益", icon: <BarChart3 className="size-4" /> },
   { key: "comparison", label: "策略对比", shortLabel: "对比", icon: <GitCompareArrows className="size-4" /> },
