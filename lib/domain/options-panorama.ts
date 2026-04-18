@@ -1,5 +1,6 @@
 import { roundTo } from "./calculations";
 import type {
+  ExpiryCalendarDay,
   MaxPainPoint,
   OiHeatmapCell,
   OptionContract,
@@ -236,4 +237,72 @@ export function analyzeOptionsPanorama(
     totalPutOi: roundTo(totalPutOi, 2),
     ...heatmapData,
   };
+}
+
+/**
+ * 按到期日聚合数据，生成日历视图所需的每日摘要
+ */
+export function buildExpiryCalendarDays(
+  options: OptionContract[],
+  maxPainPoints: MaxPainPoint[],
+  spotPrice: number,
+): ExpiryCalendarDay[] {
+  const groups = groupByExpiration(options);
+  const maxPainMap = new Map(maxPainPoints.map((mp) => [mp.expirationTimestamp, mp.maxPainStrike]));
+  const dateFormatter = new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric", timeZone: "UTC" });
+  const results: ExpiryCalendarDay[] = [];
+
+  for (const [expTs, contracts] of groups) {
+    let callOi = 0;
+    let putOi = 0;
+    let totalVolume = 0;
+    const strikeSet = new Set<number>();
+
+    for (const c of contracts) {
+      if (c.openInterest > 0) strikeSet.add(c.strike);
+      if (c.optionType === "call") {
+        callOi += c.openInterest;
+      } else {
+        putOi += c.openInterest;
+      }
+      totalVolume += c.volume;
+    }
+
+    const totalOi = callOi + putOi;
+    if (totalOi <= 0) continue;
+
+    const oiRatio = callOi > 0 ? roundTo(putOi / callOi, 3) : Infinity;
+    let sentiment: ExpiryCalendarDay["sentiment"] = "中性";
+    if (oiRatio < 0.7) sentiment = "偏多";
+    else if (oiRatio > 1.3) sentiment = "偏空";
+
+    const maxPainStrike = maxPainMap.get(expTs) ?? null;
+    const maxPainDeviationPercent = maxPainStrike != null && spotPrice > 0
+      ? roundTo(((spotPrice - maxPainStrike) / spotPrice) * 100, 1)
+      : null;
+
+    const first = contracts[0]!;
+    const date = new Date(expTs);
+
+    results.push({
+      expirationTimestamp: expTs,
+      dateLabel: dateFormatter.format(date),
+      day: date.getUTCDate(),
+      month: date.getUTCMonth(),
+      year: date.getUTCFullYear(),
+      totalOi: roundTo(totalOi, 2),
+      callOi: roundTo(callOi, 2),
+      putOi: roundTo(putOi, 2),
+      oiRatio,
+      sentiment,
+      maxPainStrike,
+      maxPainDeviationPercent,
+      uniqueStrikes: strikeSet.size,
+      totalVolume: roundTo(totalVolume, 2),
+      daysToExpiry: first.daysToExpiry,
+    });
+  }
+
+  results.sort((a, b) => a.expirationTimestamp - b.expirationTimestamp);
+  return results;
 }

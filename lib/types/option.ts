@@ -287,3 +287,23 @@ export interface OptionsPanorama {
   totalCallOi: number;
   totalPutOi: number;
 }
+
+// --- Expiry Calendar ---
+
+export interface ExpiryCalendarDay {
+  expirationTimestamp: number;
+  dateLabel: string;
+  day: number;
+  month: number;
+  year: number;
+  totalOi: number;
+  callOi: number;
+  putOi: number;
+  oiRatio: number;
+  sentiment: "偏多" | "中性" | "偏空";
+  maxPainStrike: number | null;
+  maxPainDeviationPercent: number | null;
+  uniqueStrikes: number;
+  totalVolume: number;
+  daysToExpiry: number;
+}

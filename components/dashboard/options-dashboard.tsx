@@ -15,6 +15,7 @@ import { StrategyComparison } from "@/components/dashboard/strategy-comparison";
 import { VolatilityPanel } from "@/components/dashboard/volatility-panel";
 import { MarketOverviewPanel } from "@/components/dashboard/market-overview-panel";
 import { OptionsPanoramaPanel } from "@/components/dashboard/options-panorama-panel";
+import { StrategyExpiryCalendarPanel } from "@/components/dashboard/strategy-expiry-calendar-panel";
 import { PageSidebar, PageTabs, type TabKey } from "@/components/dashboard/page-sidebar";
 import { buildRecommendations, getRecommendationMethodology } from "@/lib/domain/recommendation";
 import {
@@ -24,7 +25,7 @@ import {
 import { buildLongCallRecommendations, getLongCallMethodology } from "@/lib/domain/long-call";
 import { analyzeMarketOverview } from "@/lib/domain/market-analysis";
 import { analyzeVolatility } from "@/lib/domain/volatility";
-import { analyzeOptionsPanorama } from "@/lib/domain/options-panorama";
+import { analyzeOptionsPanorama, buildExpiryCalendarDays } from "@/lib/domain/options-panorama";
 import { fetchBtcHistoricalSeries, fetchBtcTicker, fetchOptionsChain } from "@/lib/market/deribit-client";
 import { validateRecommendationInput } from "@/lib/domain/calculations";
 import type {
@@ -148,6 +149,10 @@ export function OptionsDashboard() {
   const panorama = useMemo(
     () => chain ? analyzeOptionsPanorama(chain.options, ticker?.price ?? 0) : null,
     [chain, ticker?.price],
+  );
+  const calendarDays = useMemo(
+    () => chain ? buildExpiryCalendarDays(chain.options, panorama?.maxPainPoints ?? [], ticker?.price ?? 0) : [],
+    [chain, panorama?.maxPainPoints, ticker?.price],
   );
   const marketOverview = !ticker?.price || !(chain?.options?.length)
     ? null
@@ -464,6 +469,13 @@ export function OptionsDashboard() {
 
             {activeTab === "panorama" && (
               <OptionsPanoramaPanel panorama={panorama} underlyingPrice={ticker?.price} />
+            )}
+
+            {activeTab === "calendar" && (
+              <StrategyExpiryCalendarPanel
+                calendarDays={calendarDays}
+                panorama={panorama}
+              />
             )}
 
             {activeTab === "risk" && (
