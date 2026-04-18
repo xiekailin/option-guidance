@@ -240,3 +240,50 @@ export interface VolatilityAnalysis {
   verdict: string;
   summary: string;
 }
+
+// --- Options Panorama ---
+
+export interface MaxPainPoint {
+  expiration: string;
+  expirationTimestamp: number;
+  daysToExpiry: number;
+  maxPainStrike: number;
+  strikes: {
+    strike: number;
+    totalIntrinsicValue: number;
+  }[];
+}
+
+export interface PutCallRatioPoint {
+  expiration: string;
+  expirationTimestamp: number;
+  daysToExpiry: number;
+  callOi: number;
+  putOi: number;
+  callVolume: number;
+  putVolume: number;
+  oiRatio: number;
+  volumeRatio: number;
+  sentiment: "偏多" | "中性" | "偏空";
+}
+
+export interface OiHeatmapCell {
+  strike: number;
+  expiration: string;
+  expirationTimestamp: number;
+  callOi: number;
+  putOi: number;
+  totalOi: number;
+}
+
+export interface OptionsPanorama {
+  maxPainPoints: MaxPainPoint[];
+  putCallRatios: PutCallRatioPoint[];
+  overallOiRatio: number;
+  overallVolumeRatio: number;
+  heatmap: OiHeatmapCell[];
+  heatmapStrikes: number[];
+  heatmapExpirations: string[];
+  totalCallOi: number;
+  totalPutOi: number;
+}

@@ -32,10 +32,10 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-4 py-8">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-3 py-4 sm:px-4 sm:py-8" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
       <div className="fixed inset-0 bg-slate-950/82" onClick={onClose} />
 
-      <div className="panel-surface-strong relative z-10 my-auto w-full max-w-5xl overflow-hidden rounded-[32px] p-6">
+      <div className="panel-surface-strong relative z-10 my-auto w-full max-w-5xl overflow-hidden rounded-[24px] p-4 sm:rounded-[32px] sm:p-6">
         <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/55 to-transparent" />
         <div className="flex items-center justify-between gap-4">
           <div>

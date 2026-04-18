@@ -14,6 +14,7 @@ import { PayoffCalculator } from "@/components/dashboard/payoff-calculator";
 import { StrategyComparison } from "@/components/dashboard/strategy-comparison";
 import { VolatilityPanel } from "@/components/dashboard/volatility-panel";
 import { MarketOverviewPanel } from "@/components/dashboard/market-overview-panel";
+import { OptionsPanoramaPanel } from "@/components/dashboard/options-panorama-panel";
 import { PageSidebar, PageTabs, type TabKey } from "@/components/dashboard/page-sidebar";
 import { buildRecommendations, getRecommendationMethodology } from "@/lib/domain/recommendation";
 import {
@@ -23,6 +24,7 @@ import {
 import { buildLongCallRecommendations, getLongCallMethodology } from "@/lib/domain/long-call";
 import { analyzeMarketOverview } from "@/lib/domain/market-analysis";
 import { analyzeVolatility } from "@/lib/domain/volatility";
+import { analyzeOptionsPanorama } from "@/lib/domain/options-panorama";
 import { fetchBtcHistoricalSeries, fetchBtcTicker, fetchOptionsChain } from "@/lib/market/deribit-client";
 import { validateRecommendationInput } from "@/lib/domain/calculations";
 import type {
@@ -143,6 +145,10 @@ export function OptionsDashboard() {
     () => analyzeVolatility(chain?.options ?? [], ticker?.price ?? null, historicalSeries?.points ?? []),
     [chain?.options, historicalSeries?.points, ticker?.price],
   );
+  const panorama = useMemo(
+    () => chain ? analyzeOptionsPanorama(chain.options, ticker?.price ?? 0) : null,
+    [chain, ticker?.price],
+  );
   const marketOverview = !ticker?.price || !(chain?.options?.length)
     ? null
     : analyzeMarketOverview({
@@ -207,8 +213,8 @@ export function OptionsDashboard() {
 
   return (
     <div className="min-h-screen text-slate-100">
-      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
-        <section className="panel-surface-strong data-grid relative overflow-hidden rounded-[36px] p-5 sm:p-6 lg:p-7">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-4 px-3 py-4 sm:gap-5 sm:px-6 sm:py-6 lg:px-8">
+        <section className="panel-surface-strong data-grid relative overflow-hidden rounded-[24px] p-4 sm:rounded-[36px] sm:p-6 lg:p-7">
           <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
 
           <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
@@ -222,9 +228,9 @@ export function OptionsDashboard() {
                 </span>
               </div>
 
-              <div className="mt-5 flex items-start gap-4">
-                <div className={`flex size-14 shrink-0 items-center justify-center rounded-[22px] border ${activeModeMeta.iconWrap}`}>
-                  <Activity className="size-6" />
+              <div className="mt-5 flex items-start gap-3 sm:gap-4">
+                <div className={`flex size-10 shrink-0 items-center justify-center rounded-[18px] border sm:size-14 sm:rounded-[22px] ${activeModeMeta.iconWrap}`}>
+                  <Activity className="size-5 sm:size-6" />
                 </div>
                 <div>
                   <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">BTC 期权收租指导</h1>
@@ -259,7 +265,7 @@ export function OptionsDashboard() {
               <div className="grid gap-3 sm:grid-cols-[1.2fr_0.8fr]">
                 <div className={`rounded-[28px] border p-5 shadow-[0_8px_24px_-8px_rgba(2,6,23,0.6)] ${activeModeMeta.ticket}`}>
                   <p className="text-[11px] uppercase tracking-[0.28em] text-current/70">BTC 现价</p>
-                  <p className="mt-3 text-4xl font-semibold tracking-tight text-white tabular-nums">
+                  <p className="mt-3 text-3xl font-semibold tracking-tight text-white tabular-nums sm:text-4xl">
                     {ticker?.price ? `$${ticker.price.toLocaleString()}` : "..."}
                   </p>
                   <p className="mt-2 text-xs leading-6 text-current/70">{marketOverview?.brief.title ?? "等待市场简报"}</p>
@@ -456,6 +462,10 @@ export function OptionsDashboard() {
               />
             )}
 
+            {activeTab === "panorama" && (
+              <OptionsPanoramaPanel panorama={panorama} underlyingPrice={ticker?.price} />
+            )}
+
             {activeTab === "risk" && (
               <RiskPanel strategy={input.strategy} />
             )}
@@ -488,7 +498,7 @@ function StrategySegmentedControl({
   onChange: (strategy: RecommendationInput["strategy"]) => void;
 }) {
   return (
-    <div className="panel-surface inline-flex flex-wrap rounded-[22px] p-1.5 shadow-[0_8px_24px_-8px_rgba(2,6,23,0.6)]">
+    <div className="panel-surface inline-flex flex-wrap gap-1 rounded-[22px] p-1.5 shadow-[0_8px_24px_-8px_rgba(2,6,23,0.6)]">
       {strategyOptions.map((opt) => {
         const isActive = opt.value === strategy;
         const activeClass =
@@ -504,7 +514,7 @@ function StrategySegmentedControl({
             type="button"
             aria-pressed={isActive}
             onClick={() => onChange(opt.value)}
-            className={`rounded-[16px] border px-3 py-2 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16] ${
+            className={`min-h-[44px] rounded-[16px] border px-3 py-2.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16] ${
               isActive ? activeClass : "border-transparent text-slate-400 hover:border-white/10 hover:bg-white/[0.05] hover:text-slate-200"
             }`}
           >

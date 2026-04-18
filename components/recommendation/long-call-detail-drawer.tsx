@@ -81,7 +81,8 @@ export function LongCallDetailDrawer({ recommendation, onClose }: LongCallDetail
         role="dialog"
         aria-modal="true"
         aria-label="佩洛西打法详情"
-        className="panel-surface-strong relative h-full w-full max-w-xl overflow-y-auto border-l border-white/10 px-6 py-6 shadow-[0_8px_30px_-10px_rgba(2,6,23,0.7)]"
+        className="panel-surface-strong relative h-full w-full max-w-xl overflow-y-auto border-l border-white/10 px-4 py-4 shadow-[0_8px_30px_-10px_rgba(2,6,23,0.7)] sm:px-6 sm:py-6"
+        style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
       >
         <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/55 to-transparent" />
         <div className="flex items-start justify-between gap-4">

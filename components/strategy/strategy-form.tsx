@@ -32,7 +32,7 @@ export function StrategyForm({ input, onChange }: StrategyFormProps) {
   const toneClasses = getToneClasses(tone);
 
   return (
-    <section className="panel-surface relative overflow-hidden rounded-[32px] p-6">
+    <section className="panel-surface relative overflow-hidden rounded-[24px] p-4 sm:rounded-[32px] sm:p-6">
       <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
 
       <div className="relative">

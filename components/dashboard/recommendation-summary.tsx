@@ -156,7 +156,7 @@ export const RecommendationSummary = memo(function RecommendationSummary({
           };
 
   return (
-    <section className="panel-surface relative overflow-hidden rounded-[32px] p-5 sm:p-6">
+    <section className="panel-surface relative overflow-hidden rounded-[24px] p-4 sm:rounded-[32px] sm:p-6">
       <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
 
       <div className="relative">
@@ -181,7 +181,7 @@ export const RecommendationSummary = memo(function RecommendationSummary({
           {cards.map((card, index) => (
             <article
               key={card.label}
-              className={`metric-tile rounded-[26px] p-5 ${index === 0 ? "xl:col-span-4" : "xl:col-span-2"}`}
+              className={`metric-tile rounded-[22px] p-4 sm:rounded-[26px] sm:p-5 ${index === 0 ? "xl:col-span-4" : "xl:col-span-2"}`}
             >
               <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">{card.label}</p>
               <p className={`mt-3 font-semibold tracking-tight tabular-nums text-white ${index === 0 ? "text-4xl sm:text-[2.6rem]" : "text-2xl"}`}>
