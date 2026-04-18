@@ -194,7 +194,7 @@ test("covered call 主路径可用，并且刷新时会出现验证动画", asyn
 
   await expect(page.getByRole("heading", { name: "BTC 期权收租指导" })).toBeVisible();
   await expect(page.getByText("输入你的条件")).toBeVisible();
-  await expect(page.getByText("BTC 现价")).toBeVisible();
+  await expect(page.getByText("BTC 现价").first()).toBeVisible();
   await expect(page.locator('button[title="刷新数据"]')).toBeVisible();
 
   await expect(page.getByRole("button", { name: "卖看涨", exact: true })).toBeVisible();
@@ -283,15 +283,15 @@ test("切到佩洛西打法后会显示解释文案、买方字段和损益图",
   await page.keyboard.press("Escape");
   await expect(longCallDrawer).toBeHidden();
 
-  await page.getByRole("button", { name: "损益计算" }).click();
+  await page.getByRole("tab", { name: "损益计算" }).click();
   await expect(page.getByText("理论上无限", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("$77,530").first()).toBeVisible();
 
-  await page.getByRole("button", { name: "策略对比" }).click();
+  await page.getByRole("tab", { name: "策略对比" }).click();
   await expect(page.getByText("佩洛西打法（Long Call)")).toHaveCount(0);
   await expect(page.getByText("佩洛西打法（Long Call）")).toBeVisible();
 
-  await page.getByRole("button", { name: "风险提示" }).click();
+  await page.getByRole("tab", { name: "风险提示" }).click();
   await expect(page.getByText("佩洛西打法的最大亏损虽然锁定在权利金，但这笔亏损仍可能是 100% 权利金，不能把“有限亏损”理解成“亏不多”。")).toBeVisible();
 });
 
@@ -301,8 +301,8 @@ test("策略对比和风险页能正常切换，并显示关键内容", async ({
 
   await page.goto(APP_ROUTE);
 
-  await page.getByRole("button", { name: "策略对比" }).click();
-  await expect(page.getByRole("heading", { name: "策略对比" })).toBeVisible();
+  await page.getByRole("tab", { name: "策略对比" }).click();
+  await expect(page.getByRole("heading", { name: "同一轮行情下，四种打法的性格完全不同" })).toBeVisible();
   await expect(page.getByText("收益率", { exact: true })).toBeVisible();
   await expect(page.getByText("安全性", { exact: true })).toBeVisible();
   await expect(page.getByText("资金效率", { exact: true })).toBeVisible();
@@ -313,7 +313,7 @@ test("策略对比和风险页能正常切换，并显示关键内容", async ({
   await expect(page.getByText("模拟持有 BTC（Synthetic Long）")).toBeVisible();
   await expect(page.getByText("佩洛西打法（Long Call）")).toBeVisible();
 
-  await page.getByRole("button", { name: "风险提示" }).click();
+  await page.getByRole("tab", { name: "风险提示" }).click();
   await expect(page.getByText("你必须先接受这些风险")).toBeVisible();
   await expect(page.getByText("持有 BTC 卖看涨的核心代价不是亏损无限，而是 BTC 大涨时你的上涨收益会被封顶。")).toBeVisible();
 });

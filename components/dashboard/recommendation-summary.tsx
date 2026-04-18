@@ -133,21 +133,65 @@ export const RecommendationSummary = memo(function RecommendationSummary({
             },
           ];
 
+  const theme =
+    strategy === "synthetic-long"
+      ? {
+          chip: "border-fuchsia-400/20 bg-fuchsia-400/10 text-fuchsia-100",
+          glow: "bg-fuchsia-500/20",
+          title: "把方向感、权利金和押金压力放在同一眼里看",
+          description: "这一排优先告诉你当前价位、首选腿和净成本，不用先翻表格。",
+        }
+      : strategy === "long-call"
+        ? {
+            chip: "border-emerald-400/20 bg-emerald-400/10 text-emerald-100",
+            glow: "bg-emerald-500/20",
+            title: "先看入场成本，再看值不值得为长期上涨买票",
+            description: "这一排会把执行价、门票钱和盈亏平衡价先摆出来。",
+          }
+        : {
+            chip: "border-cyan-400/20 bg-cyan-400/10 text-cyan-100",
+            glow: "bg-cyan-500/20",
+            title: "先看现价、首选执行价和系统建议，再决定要不要继续收租",
+            description: "这一排是你的开盘速览，当前最值得先看的数字都在这里。",
+          };
+
   return (
-    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-      {cards.map((card) => (
-        <article
-          key={card.label}
-          className="rounded-2xl border border-white/8 bg-slate-950/70 p-5"
-        >
-          <p className="text-xs text-slate-500">{card.label}</p>
-          <p className="mt-2 text-2xl font-bold tabular-nums text-white">{card.value}</p>
-          <p className="mt-1.5 text-xs text-slate-500">{card.hint}</p>
-        </article>
-      ))}
-      {updatedAt ? (
-        <p className="text-[11px] text-slate-600 sm:col-span-2 xl:col-span-5">更新于 {new Date(updatedAt).toLocaleString()}</p>
-      ) : null}
+    <section className="panel-surface relative overflow-hidden rounded-[32px] p-5 sm:p-6">
+      <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+
+      <div className="relative">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.28em] ${theme.chip}`}>
+              实时摘要
+            </span>
+            <h2 className="mt-4 text-lg font-semibold tracking-tight text-white sm:text-2xl">{theme.title}</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-400">{theme.description}</p>
+          </div>
+          {updatedAt ? (
+            <div className="metric-tile rounded-[24px] px-4 py-3 text-left lg:min-w-[240px]">
+              <p className="text-[11px] uppercase tracking-[0.28em] text-slate-500">最近更新</p>
+              <p className="mt-2 text-sm font-medium text-slate-100">{new Date(updatedAt).toLocaleString()}</p>
+              <p className="mt-1 text-xs text-slate-500">数据来源：{source ?? "Deribit"}</p>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-12">
+          {cards.map((card, index) => (
+            <article
+              key={card.label}
+              className={`metric-tile rounded-[26px] p-5 ${index === 0 ? "xl:col-span-4" : "xl:col-span-2"}`}
+            >
+              <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">{card.label}</p>
+              <p className={`mt-3 font-semibold tracking-tight tabular-nums text-white ${index === 0 ? "text-4xl sm:text-[2.6rem]" : "text-2xl"}`}>
+                {card.value}
+              </p>
+              <p className="mt-2 text-xs leading-6 text-slate-400">{card.hint}</p>
+            </article>
+          ))}
+        </div>
+      </div>
     </section>
   );
 });

@@ -20,17 +20,17 @@ export const LongCallRecommendationTable = memo(function LongCallRecommendationT
 }: LongCallRecommendationTableProps) {
   if (recommendations.length === 0) {
     return (
-      <div className="rounded-3xl border border-dashed border-white/10 bg-slate-950/70 p-8 text-center text-sm leading-7 text-slate-400">
+      <div className="panel-surface rounded-[32px] border-dashed p-8 text-center text-sm leading-7 text-slate-400">
         当前条件下没有找到合适的佩洛西打法候选。你可以提高可用现金，或把风险偏好从保守调到平衡/进取试试。
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-white/10 bg-slate-950/70 shadow-lg shadow-black/10">
+    <div className="panel-surface overflow-hidden rounded-[32px]">
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm text-slate-300">
-          <thead className="bg-white/5 text-xs uppercase tracking-[0.2em] text-slate-400">
+          <thead className="bg-white/[0.04] text-xs uppercase tracking-[0.2em] text-slate-400">
             <tr>
               <th className="px-5 py-4">合约</th>
               <th className="px-5 py-4">执行价</th>
@@ -42,7 +42,7 @@ export const LongCallRecommendationTable = memo(function LongCallRecommendationT
           </thead>
           <tbody>
             {recommendations.map((item) => (
-              <tr key={item.contract.instrumentName} className="border-t border-white/5 transition hover:bg-white/5">
+              <tr key={item.contract.instrumentName} className="border-t border-white/6 transition hover:bg-white/[0.04]">
                 <td className="px-5 py-4">
                   <div className="font-medium text-white">{item.contract.instrumentName}</div>
                   <div className="mt-1 text-xs text-slate-500">{item.contract.daysToExpiry} 天后到期</div>
@@ -71,7 +71,7 @@ export const LongCallRecommendationTable = memo(function LongCallRecommendationT
                   <button
                     type="button"
                     onClick={() => onSelect(item)}
-                    className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-200 transition hover:border-cyan-400/30 hover:text-white"
+                    className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-200 transition hover:border-emerald-400/30 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16]"
                   >
                     详情
                   </button>

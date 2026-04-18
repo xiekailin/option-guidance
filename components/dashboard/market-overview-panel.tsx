@@ -27,7 +27,7 @@ export function MarketOverviewPanel({
 }: MarketOverviewPanelProps) {
   if (!underlyingPrice) {
     return (
-      <section className="rounded-3xl border border-dashed border-white/10 bg-slate-950/70 p-8 text-center text-sm leading-7 text-slate-400">
+      <section className="panel-surface rounded-[32px] border-dashed p-8 text-center text-sm leading-7 text-slate-400">
         等待 BTC 行情加载后，再生成市场概览。
       </section>
     );
@@ -35,7 +35,7 @@ export function MarketOverviewPanel({
 
   if (!overview) {
     return (
-      <section className="rounded-3xl border border-dashed border-white/10 bg-slate-950/70 p-8 text-center text-sm leading-7 text-slate-400">
+      <section className="panel-surface rounded-[32px] border-dashed p-8 text-center text-sm leading-7 text-slate-400">
         市场分析还在准备中，等期权链和历史数据到齐后会补全。
       </section>
     );
@@ -43,7 +43,7 @@ export function MarketOverviewPanel({
 
   return (
     <section className="space-y-5">
-      <div className="rounded-3xl border border-white/10 bg-slate-950/80 p-6 shadow-lg shadow-black/10">
+      <div className="panel-surface rounded-[32px] p-6">
         <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr] xl:items-start">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] text-cyan-200">
@@ -54,14 +54,14 @@ export function MarketOverviewPanel({
             <p className="mt-3 text-sm leading-7 text-slate-300">{overview.brief.summary}</p>
           </div>
           <div className="space-y-4">
-            <div className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-right">
-              <p className="text-xs text-slate-500">BTC 现价</p>
-              <p className="mt-2 text-2xl font-bold tabular-nums text-white">${underlyingPrice.toLocaleString()}</p>
+            <div className="metric-tile rounded-[24px] px-4 py-3 text-right">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">BTC 现价</p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums text-white">${underlyingPrice.toLocaleString()}</p>
             </div>
-            <div className="rounded-2xl border border-cyan-400/20 bg-slate-950/70 p-4">
-              <p className="text-xs text-cyan-300">系统建议模式</p>
-              <p className="mt-2 text-xl font-semibold text-white">{overview.advice.label}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-300">{overview.advice.summary}</p>
+            <div className="rounded-[24px] border border-cyan-400/20 bg-[linear-gradient(180deg,rgba(34,211,238,0.14),rgba(255,255,255,0.03))] p-4">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-cyan-200">系统建议模式</p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight text-white">{overview.advice.label}</p>
+              <p className="mt-2 text-sm leading-7 text-slate-200">{overview.advice.summary}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-slate-200">置信度 {formatConfidence(overview.advice.confidence)}</span>
               </div>
@@ -83,14 +83,14 @@ export function MarketOverviewPanel({
         </div>
       </div>
 
-      <article className="rounded-3xl border border-white/10 bg-slate-950/80 p-6 shadow-lg shadow-black/10">
+      <article className="panel-surface rounded-[32px] p-6">
         <div className="flex items-center gap-2 text-cyan-200">
           <Activity className="size-4" />
           <p className="text-sm font-medium">为什么现在更偏这个策略</p>
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           {overview.advice.reasons.map((reason, index) => (
-            <div key={`${index}-${reason}`} className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-sm leading-7 text-slate-300">
+            <div key={`${index}-${reason}`} className="metric-tile rounded-[24px] p-4 text-sm leading-7 text-slate-300">
               {reason}
             </div>
           ))}
@@ -102,7 +102,7 @@ export function MarketOverviewPanel({
       </article>
 
       <div className="grid gap-5 xl:grid-cols-2">
-        <article className="rounded-3xl border border-white/10 bg-slate-950/80 p-6 shadow-lg shadow-black/10">
+        <article className="panel-surface rounded-[32px] p-6">
           <div className="flex items-center gap-2 text-cyan-200">
             <Gauge className="size-4" />
             <p className="text-sm font-medium">趋势动量</p>
@@ -126,7 +126,7 @@ export function MarketOverviewPanel({
           <p className="mt-4 text-sm leading-7 text-slate-300">{overview.trendMomentum.summary}</p>
         </article>
 
-        <article className="rounded-3xl border border-white/10 bg-slate-950/80 p-6 shadow-lg shadow-black/10">
+        <article className="panel-surface rounded-[32px] p-6">
           <div className="flex items-center gap-2 text-cyan-200">
             <MapPinned className="size-4" />
             <p className="text-sm font-medium">关键价位</p>
@@ -137,7 +137,7 @@ export function MarketOverviewPanel({
             <MetricCard label="30天区间低点" value={formatPrice(overview.keyLevels.rangeLow30d)} hint="近期价格下沿" />
             <MetricCard label="30天区间高点" value={formatPrice(overview.keyLevels.rangeHigh30d)} hint="近期价格上沿" />
           </div>
-          <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-sm leading-7 text-slate-300">
+          <div className="mt-4 space-y-3 metric-tile rounded-[24px] p-4 text-sm leading-7 text-slate-300">
             <div>
               <p className="font-medium text-white">大白话怎么理解</p>
               <p className="mt-2">{overview.keyLevels.resistancePlain}</p>
@@ -158,7 +158,7 @@ export function MarketOverviewPanel({
         </article>
       </div>
 
-      <article className="rounded-3xl border border-white/10 bg-slate-950/80 p-6 shadow-lg shadow-black/10">
+      <article className="panel-surface rounded-[32px] p-6">
         <div className="flex items-center gap-2 text-cyan-200">
           <Layers3 className="size-4" />
           <p className="text-sm font-medium">衍生品情绪</p>
@@ -182,7 +182,7 @@ export function MarketOverviewPanel({
 
 function MetricCard({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
+    <div className="metric-tile rounded-[24px] p-4">
       <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">{label}</p>
       <p className="mt-2 text-2xl font-bold tabular-nums text-white">{value}</p>
       <p className="mt-1.5 text-xs leading-5 text-slate-400">{hint}</p>

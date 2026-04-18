@@ -35,7 +35,7 @@ export function VolatilityPanel({
 
   return (
     <section id="volatility" className="scroll-mt-24">
-      <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-6 shadow-lg shadow-black/10">
+      <div className="panel-surface rounded-[32px] p-6">
         <div className="flex items-center gap-3">
           <Activity className="size-5 text-cyan-300" />
           <div>
@@ -80,11 +80,11 @@ export function VolatilityPanel({
               />
             </div>
 
-            <div className="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4">
-              <p className="text-sm font-medium text-cyan-100">一句话判断</p>
-              <p className="mt-2 text-base font-semibold text-white">{analysis.verdict}</p>
-              <p className="mt-2 text-sm leading-7 text-cyan-50/90">{analysis.summary}</p>
-              <p className="mt-2 text-xs text-cyan-100/70">全部合约范围 {analysis.ivMin}% — {analysis.ivMax}%，中位数 {analysis.ivMedian}%</p>
+            <div className="mt-4 rounded-[28px] border border-cyan-400/20 bg-[linear-gradient(180deg,rgba(34,211,238,0.16),rgba(255,255,255,0.03))] p-5">
+              <p className="text-[11px] uppercase tracking-[0.26em] text-cyan-100">一句话判断</p>
+              <p className="mt-3 text-2xl font-semibold tracking-tight text-white">{analysis.verdict}</p>
+              <p className="mt-3 text-sm leading-7 text-cyan-50/90">{analysis.summary}</p>
+              <p className="mt-3 text-xs text-cyan-100/70">全部合约范围 {analysis.ivMin}% — {analysis.ivMax}%，中位数 {analysis.ivMedian}%</p>
               {historicalError ? (
                 <p className="mt-2 text-xs text-amber-200">历史波动率加载失败，下面先只参考隐含波动率。</p>
               ) : historicalLoading ? (
@@ -151,7 +151,7 @@ function MetricCard({
   badgeClassName?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+    <div className="metric-tile rounded-[24px] p-4">
       <div className="flex items-start justify-between gap-3">
         <p className="text-xs text-slate-400">{label}</p>
         {badge ? <span className={`rounded-full border px-2 py-0.5 text-[11px] ${badgeClassName}`}>{badge}</span> : null}

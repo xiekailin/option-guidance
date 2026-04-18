@@ -200,19 +200,24 @@ export function StrategyComparison({
 
   return (
     <section className="scroll-mt-24">
-      <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-6 shadow-lg shadow-black/10">
-        <div className="mb-5">
-          <h2 className="text-xl font-semibold text-white">策略对比</h2>
-          <p className="mt-1 text-xs text-slate-400">同样的行情下，四种策略的赚钱方式、风险和资金效率有什么不同</p>
+      <div className="panel-surface rounded-[32px] p-6">
+        <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <span className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] uppercase tracking-[0.26em] text-cyan-100">
+              策略对比
+            </span>
+            <h2 className="mt-4 text-2xl font-semibold tracking-tight text-white">同一轮行情下，四种打法的性格完全不同</h2>
+            <p className="mt-2 text-sm leading-7 text-slate-400">把收益天花板、下行风险、资金效率和操作复杂度放在同一张桌面上看。</p>
+          </div>
         </div>
 
-        <div className="mb-6 rounded-2xl border border-white/8 bg-slate-950/40 p-4">
+        <div className="metric-tile mb-6 rounded-[28px] p-4">
           <RadarChart />
         </div>
 
         <div className="grid gap-4 xl:grid-cols-4">
           {columns.map((col) => (
-            <div key={col.key} className={`rounded-2xl border p-5 ${col.data ? borderColor[col.color] : "border-white/5 bg-slate-950/40 opacity-50"}`}>
+            <div key={col.key} className={`rounded-[26px] border p-5 ${col.data ? borderColor[col.color] : "border-white/5 bg-slate-950/40 opacity-50"}`}>
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium text-white">{col.label}</p>
@@ -240,7 +245,7 @@ export function StrategyComparison({
           ))}
         </div>
 
-        <div className="mt-5 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-7 text-amber-50/95">
+        <div className="mt-5 rounded-[26px] border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-7 text-amber-50/95">
           <p className="font-medium text-amber-200">怎么选</p>
           <ul className="mt-2 space-y-1">
             <li>- <strong>看涨但想赚租金</strong> → 持有 BTC 卖看涨，赚权利金但涨太多你就卖飞了。</li>

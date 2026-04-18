@@ -169,44 +169,141 @@ export function OptionsDashboard() {
   const isLoading = tickerLoading || chainLoading;
   const isValidating = tickerValidating || chainValidating;
   const hasError = tickerError || chainError;
+  const activeModeMeta = isSyntheticMode
+    ? {
+        badge: "border-fuchsia-400/20 bg-fuchsia-400/10 text-fuchsia-100",
+        glow: "bg-fuchsia-500/20",
+        iconWrap: "border-fuchsia-400/20 bg-fuchsia-400/10 text-fuchsia-200",
+        highlight: "text-fuchsia-200",
+        ticket: "border-fuchsia-400/20 bg-fuchsia-400/10 text-fuchsia-50",
+        action: "border-fuchsia-400/18 bg-fuchsia-400/10 text-fuchsia-100 hover:border-fuchsia-300/40 hover:text-white",
+        mode: "合成现货",
+        note: "买 Call + 卖 Put，把强看涨观点做成一张组合票。",
+      }
+    : isLongCallMode
+      ? {
+          badge: "border-emerald-400/20 bg-emerald-400/10 text-emerald-100",
+          glow: "bg-emerald-500/20",
+          iconWrap: "border-emerald-400/20 bg-emerald-400/10 text-emerald-200",
+          highlight: "text-emerald-200",
+          ticket: "border-emerald-400/20 bg-emerald-400/10 text-emerald-50",
+          action: "border-emerald-400/18 bg-emerald-400/10 text-emerald-100 hover:border-emerald-300/40 hover:text-white",
+          mode: "佩洛西打法",
+          note: "先锁死权利金亏损，再用半年到一年 Call 押长期上涨弹性。",
+        }
+      : {
+          badge: "border-cyan-400/20 bg-cyan-400/10 text-cyan-100",
+          glow: "bg-cyan-500/20",
+          iconWrap: "border-cyan-400/20 bg-cyan-400/10 text-cyan-200",
+          highlight: "text-cyan-200",
+          ticket: "border-cyan-400/20 bg-cyan-400/10 text-cyan-50",
+          action: "border-cyan-400/18 bg-cyan-400/10 text-cyan-100 hover:border-cyan-300/40 hover:text-white",
+          mode: input.strategy === "cash-secured-put" ? "卖看跌准备接货" : "持有 BTC 卖看涨",
+          note:
+            input.strategy === "cash-secured-put"
+              ? "先收一笔权利金，等价格跌下来再按计划接货。"
+              : "用手里的 BTC 持续收租，但接受上涨收益被封顶。",
+        };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
-        {/* 紧凑头部：一行搞定标题 + 状态 */}
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-cyan-400/10">
-              <Activity className="size-5 text-cyan-400" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">BTC 期权收租指导</h1>
-              <p className="text-xs text-slate-500">实时拉取 Deribit 行情，给你个性化的策略建议</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-lg border border-white/10 bg-slate-950/70 px-3 py-1.5 text-sm shadow-sm shadow-black/10">
-              <span className="text-slate-500">BTC</span>{" "}
-              <span className="font-semibold text-white">{ticker?.price ? `$${ticker.price.toLocaleString()}` : "..."}</span>
-            </span>
-            <StrategySegmentedControl strategy={input.strategy} onChange={(s) => setInput({
-              ...input,
-              strategy: s,
-              ...(s === "cash-secured-put" || s === "synthetic-long" ? { acceptAssignment: true } : { acceptAssignment: false }),
-              ...(s === "long-call" ? { cycle: "monthly" } : {}),
-            })} />
-            <button
-              type="button"
-              onClick={() => { void refreshTicker(); void refreshChain(); }}
-              className="rounded-lg border border-white/10 bg-slate-950/70 p-2 text-slate-400 transition hover:border-cyan-400/30 hover:text-white"
-              title="刷新数据"
-            >
-              <RefreshCw className={`size-3.5 ${isValidating ? "animate-spin" : ""}`} />
-            </button>
-          </div>
-        </header>
+    <div className="min-h-screen text-slate-100">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
+        <section className="panel-surface-strong data-grid relative overflow-hidden rounded-[36px] p-5 sm:p-6 lg:p-7">
+          <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
 
-        {/* 摘要卡片 */}
+          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-3xl">
+              <div className="flex flex-wrap gap-2">
+                <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.28em] ${activeModeMeta.badge}`}>
+                  BTC 期权收租指导
+                </span>
+                <span className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] uppercase tracking-[0.28em] text-slate-400">
+                  Deribit 实时行情
+                </span>
+              </div>
+
+              <div className="mt-5 flex items-start gap-4">
+                <div className={`flex size-14 shrink-0 items-center justify-center rounded-[22px] border ${activeModeMeta.iconWrap}`}>
+                  <Activity className="size-6" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">BTC 期权收租指导</h1>
+                  <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
+                    实时拉取 Deribit 行情，按你当前仓位、现金和风险偏好，直接给出更像交易终端而不是表单工具的策略视图。
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                <div className="metric-tile rounded-[24px] p-4">
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-slate-500">当前模式</p>
+                  <p className={`mt-3 text-xl font-semibold tracking-tight ${activeModeMeta.highlight}`}>{activeModeMeta.mode}</p>
+                  <p className="mt-2 text-xs leading-6 text-slate-400">{activeModeMeta.note}</p>
+                </div>
+                <div className="metric-tile rounded-[24px] p-4">
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-slate-500">候选数量</p>
+                  <p className="mt-3 text-xl font-semibold tracking-tight text-white tabular-nums">{totalCount}</p>
+                  <p className="mt-2 text-xs leading-6 text-slate-400">符合当前条件并进入排序的合约或组合数量。</p>
+                </div>
+                <div className="metric-tile rounded-[24px] p-4">
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-slate-500">数据状态</p>
+                  <p className="mt-3 text-xl font-semibold tracking-tight text-white">
+                    {hasError ? "异常" : isLoading ? "同步中" : isValidating ? "刷新中" : "实时在线"}
+                  </p>
+                  <p className="mt-2 text-xs leading-6 text-slate-400">{chain?.source ?? ticker?.source ?? "等待连接市场数据源"}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-3 xl:min-w-[430px] xl:max-w-[460px]">
+              <div className="grid gap-3 sm:grid-cols-[1.2fr_0.8fr]">
+                <div className={`rounded-[28px] border p-5 shadow-[0_8px_24px_-8px_rgba(2,6,23,0.6)] ${activeModeMeta.ticket}`}>
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-current/70">BTC 现价</p>
+                  <p className="mt-3 text-4xl font-semibold tracking-tight text-white tabular-nums">
+                    {ticker?.price ? `$${ticker.price.toLocaleString()}` : "..."}
+                  </p>
+                  <p className="mt-2 text-xs leading-6 text-current/70">{marketOverview?.brief.title ?? "等待市场简报"}</p>
+                </div>
+                <div className="metric-tile rounded-[28px] p-5">
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-slate-500">最近更新</p>
+                  <p className="mt-3 text-lg font-semibold tracking-tight text-white">
+                    {chain?.updatedAt ?? ticker?.updatedAt ? new Date(chain?.updatedAt ?? ticker?.updatedAt ?? "").toLocaleTimeString() : "--:--:--"}
+                  </p>
+                  <p className="mt-2 text-xs leading-6 text-slate-400">{isValidating ? "正在拉取最新价格与期权链" : "手动刷新可强制重新同步"}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <StrategySegmentedControl
+                  strategy={input.strategy}
+                  onChange={(s) => {
+                    setSelected(null);
+                    setSelectedLongCall(null);
+                    setInput({
+                      ...input,
+                      strategy: s,
+                      ...(s === "cash-secured-put" || s === "synthetic-long" ? { acceptAssignment: true } : { acceptAssignment: false }),
+                      ...(s === "long-call" ? { cycle: "monthly" } : {}),
+                    });
+                  }}
+                />
+                <button
+                  type="button"
+                  aria-label="刷新数据"
+                  onClick={() => {
+                    void refreshTicker();
+                    void refreshChain();
+                  }}
+                  className={`flex h-[52px] shrink-0 items-center justify-center rounded-[20px] border px-4 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16] ${activeModeMeta.action}`}
+                  title="刷新数据"
+                >
+                  <RefreshCw className={`size-4 ${isValidating ? "animate-spin" : ""}`} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <RecommendationSummary
           strategy={input.strategy}
           price={ticker?.price}
@@ -221,7 +318,6 @@ export function OptionsDashboard() {
           adviceLabel={marketOverview?.advice.label}
         />
 
-        {/* 移动端标签 + 桌面端侧边栏 */}
         <PageTabs activeTab={activeTab} onTabChange={handleTabChange} />
 
         <div className="flex gap-6">
@@ -246,11 +342,11 @@ export function OptionsDashboard() {
 
                 <section className="space-y-5">
                   {/* 操作按钮行 */}
-                  <div className="flex gap-2">
+                  <div className="panel-surface flex flex-wrap gap-2 rounded-[24px] p-2">
                     <button
                       type="button"
                       onClick={() => setShowReadingGuide(true)}
-                      className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-xs text-slate-300 transition hover:border-cyan-400/30 hover:text-white"
+                      className={`flex items-center gap-1.5 rounded-[18px] border px-3 py-2 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16] ${activeModeMeta.action}`}
                     >
                       <HelpCircle className="size-3.5" />
                       结果解读
@@ -258,7 +354,7 @@ export function OptionsDashboard() {
                     <button
                       type="button"
                       onClick={() => setShowMethodology(true)}
-                      className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-xs text-slate-300 transition hover:border-cyan-400/30 hover:text-white"
+                      className={`flex items-center gap-1.5 rounded-[18px] border px-3 py-2 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16] ${activeModeMeta.action}`}
                     >
                       <BookOpen className="size-3.5" />
                       算法说明
@@ -392,22 +488,24 @@ function StrategySegmentedControl({
   onChange: (strategy: RecommendationInput["strategy"]) => void;
 }) {
   return (
-    <div className="inline-flex rounded-lg border border-white/10 bg-slate-950/70 p-0.5 shadow-sm shadow-black/10">
+    <div className="panel-surface inline-flex flex-wrap rounded-[22px] p-1.5 shadow-[0_8px_24px_-8px_rgba(2,6,23,0.6)]">
       {strategyOptions.map((opt) => {
         const isActive = opt.value === strategy;
+        const activeClass =
+          opt.value === "synthetic-long"
+            ? "border-fuchsia-400/25 bg-[linear-gradient(135deg,rgba(217,70,239,0.22),rgba(217,70,239,0.08))] text-fuchsia-100"
+            : opt.value === "long-call"
+              ? "border-emerald-400/25 bg-[linear-gradient(135deg,rgba(16,185,129,0.22),rgba(16,185,129,0.08))] text-emerald-100"
+              : "border-cyan-400/25 bg-[linear-gradient(135deg,rgba(34,211,238,0.22),rgba(34,211,238,0.08))] text-cyan-100";
+
         return (
           <button
             key={opt.value}
             type="button"
+            aria-pressed={isActive}
             onClick={() => onChange(opt.value)}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
-              isActive
-                ? opt.value === "synthetic-long"
-                  ? "bg-fuchsia-400/20 text-fuchsia-200"
-                  : opt.value === "long-call"
-                    ? "bg-emerald-400/20 text-emerald-200"
-                    : "bg-cyan-400/20 text-cyan-200"
-                : "text-slate-500 hover:text-slate-300"
+            className={`rounded-[16px] border px-3 py-2 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16] ${
+              isActive ? activeClass : "border-transparent text-slate-400 hover:border-white/10 hover:bg-white/[0.05] hover:text-slate-200"
             }`}
           >
             <span className="hidden sm:inline">{opt.label}</span>
@@ -448,21 +546,21 @@ function TopRecommendationPanel({
 }) {
   if (!recommendation) {
     return (
-      <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-sm leading-7 text-slate-400">
+      <div className="panel-surface rounded-[32px] border-dashed p-8 text-sm leading-7 text-slate-400">
         暂时没有满足你条件的候选。你可以降低最低租金门槛，或者把周度/保守切到月度/平衡试试。
       </div>
     );
   }
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-slate-950/80 p-5 shadow-lg shadow-black/10">
+    <section className="panel-surface relative overflow-hidden rounded-[32px] p-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="max-w-3xl">
-          <div className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] text-cyan-200">当前首选建议</div>
-          <h2 className="mt-3 text-xl font-semibold text-white">{recommendation.contract.instrumentName}</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-300">{recommendation.summary}</p>
+          <div className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-cyan-200">当前首选建议</div>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white">{recommendation.contract.instrumentName}</h2>
+          <p className="mt-3 text-sm leading-7 text-slate-300">{recommendation.summary}</p>
         </div>
-        <div className="grid gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-200 sm:grid-cols-2 md:min-w-[340px]">
+        <div className="grid gap-3 rounded-[26px] border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-200 sm:grid-cols-2 md:min-w-[340px]">
           <MiniMetric label="评分" value={`${recommendation.score}`} />
           <MiniMetric label="触发概率" value={`${Math.abs(recommendation.contract.delta ?? 0).toFixed(3)}`} />
           <MiniMetric label="单张租金" value={formatUsdAmount(recommendation.premiumPerMinContractUsd)} />
@@ -481,23 +579,23 @@ function TopRecommendationPanel({
 function TopSyntheticPanel({ recommendation }: { recommendation: SyntheticLongRecommendation | undefined }) {
   if (!recommendation) {
     return (
-      <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-sm leading-7 text-slate-400">
+      <div className="panel-surface rounded-[32px] border-dashed p-8 text-sm leading-7 text-slate-400">
         暂时没有满足你条件的模拟持有 BTC 组合。你可以放宽周期、调整风险偏好，或者增加可用现金后再试。
       </div>
     );
   }
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-slate-950/80 p-5 shadow-lg shadow-black/10">
+    <section className="panel-surface relative overflow-hidden rounded-[32px] p-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="max-w-3xl">
-          <div className="inline-flex rounded-full border border-fuchsia-400/20 bg-fuchsia-400/10 px-3 py-1 text-[11px] text-fuchsia-200">当前首选组合</div>
-          <h2 className="mt-1 text-xl font-semibold text-white">
+          <div className="inline-flex rounded-full border border-fuchsia-400/20 bg-fuchsia-400/10 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-fuchsia-200">当前首选组合</div>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-white">
             买 {recommendation.pair.call.instrumentName} / 卖 {recommendation.pair.put.instrumentName}
           </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-300">{recommendation.summary}</p>
+          <p className="mt-3 text-sm leading-7 text-slate-300">{recommendation.summary}</p>
         </div>
-        <div className="grid gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-200 sm:grid-cols-2 md:min-w-[340px]">
+        <div className="grid gap-3 rounded-[26px] border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-200 sm:grid-cols-2 md:min-w-[340px]">
           <MiniMetric label="评分" value={`${recommendation.score}`} />
           <MiniMetric label="净权利金" value={formatUsdAmount(recommendation.pair.netPremiumUsdPerMinContract)} />
           <MiniMetric label="可做最大张数" value={`${recommendation.maxLots}`} />
@@ -513,21 +611,21 @@ function TopSyntheticPanel({ recommendation }: { recommendation: SyntheticLongRe
 function TopLongCallPanel({ recommendation }: { recommendation: LongCallRecommendation | undefined }) {
   if (!recommendation) {
     return (
-      <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-sm leading-7 text-slate-400">
+      <div className="panel-surface rounded-[32px] border-dashed p-8 text-sm leading-7 text-slate-400">
         暂时没有满足你条件的佩洛西打法候选。你可以提高可用现金，或者把风险偏好从保守调到平衡/进取试试。
       </div>
     );
   }
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-slate-950/80 p-5 shadow-lg shadow-black/10">
+    <section className="panel-surface relative overflow-hidden rounded-[32px] p-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="max-w-3xl">
-          <div className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[11px] text-emerald-200">当前首选 Call</div>
-          <h2 className="mt-3 text-xl font-semibold text-white">{recommendation.contract.instrumentName}</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-300">{recommendation.summary}</p>
+          <div className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-emerald-200">当前首选 Call</div>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white">{recommendation.contract.instrumentName}</h2>
+          <p className="mt-3 text-sm leading-7 text-slate-300">{recommendation.summary}</p>
         </div>
-        <div className="grid gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-200 sm:grid-cols-2 md:min-w-[340px]">
+        <div className="grid gap-3 rounded-[26px] border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-200 sm:grid-cols-2 md:min-w-[340px]">
           <MiniMetric label="评分" value={`${recommendation.score}`} />
           <MiniMetric label="单张权利金" value={formatUsdAmount(recommendation.premiumPerMinContractUsd)} />
           <MiniMetric label="最大亏损" value={formatUsdAmount(recommendation.maxLossUsd)} />
@@ -549,7 +647,7 @@ function ResultInterpretationPanel({
 }) {
   return (
     <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr_1fr]">
-      <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <article className="metric-tile rounded-[28px] p-5">
         <p className="text-sm font-medium text-white">这轮结果先怎么筛</p>
         <div className="mt-4 space-y-3">
           {methodology.filters.map((item) => (
@@ -561,7 +659,7 @@ function ResultInterpretationPanel({
         </div>
       </article>
 
-      <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <article className="metric-tile rounded-[28px] p-5">
         <p className="text-sm font-medium text-white">推荐表怎么读</p>
         <div className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
           <ReadingHint label="触发概率" description="越接近 1 说明越容易被触发执行，租金通常更厚，但风险也更大。" />
@@ -571,7 +669,7 @@ function ResultInterpretationPanel({
         </div>
       </article>
 
-      <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <article className="metric-tile rounded-[28px] p-5">
         <p className="text-sm font-medium text-white">为什么不是只看权利金最高</p>
         <p className="mt-4 text-sm leading-7 text-slate-300">
           {recommendation?.summary ?? "模型会先按方向、触发概率、到期时间和最低租金筛选，再做综合打分。租金只是其中一个维度。"}
@@ -600,7 +698,7 @@ function SyntheticInterpretationPanel({
 }) {
   return (
     <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr_1fr]">
-      <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <article className="metric-tile rounded-[28px] p-5">
         <p className="text-sm font-medium text-white">这轮组合先怎么筛</p>
         <div className="mt-4 space-y-3">
           {methodology.filters.map((item) => (
@@ -612,7 +710,7 @@ function SyntheticInterpretationPanel({
         </div>
       </article>
 
-      <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <article className="metric-tile rounded-[28px] p-5">
         <p className="text-sm font-medium text-white">这张组合怎么读</p>
         <div className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
           <ReadingHint label="买看涨期权" description="放大上涨收益；BTC 涨得越多，买的看涨期权赚得越多。" />
@@ -622,7 +720,7 @@ function SyntheticInterpretationPanel({
         </div>
       </article>
 
-      <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <article className="metric-tile rounded-[28px] p-5">
         <p className="text-sm font-medium text-white">为什么不是免费持有期权</p>
         <p className="mt-4 text-sm leading-7 text-slate-300">
           {recommendation?.summary ?? "你只是把买看涨的成本转移给了卖看跌的下跌风险。入场净成本接近 0，不等于极端行情的风险消失。"}
@@ -651,7 +749,7 @@ function LongCallInterpretationPanel({
 }) {
   return (
     <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr_1fr]">
-      <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <article className="metric-tile rounded-[28px] p-5">
         <p className="text-sm font-medium text-white">这轮 Call 先怎么筛</p>
         <div className="mt-4 space-y-3">
           {methodology.filters.map((item) => (
@@ -663,7 +761,7 @@ function LongCallInterpretationPanel({
         </div>
       </article>
 
-      <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <article className="metric-tile rounded-[28px] p-5">
         <p className="text-sm font-medium text-white">这张 Call 怎么读</p>
         <div className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
           <ReadingHint label="单张权利金" description="这是你入场时付出的全部成本，也是这张票理论上的最大亏损。" />
@@ -673,7 +771,7 @@ function LongCallInterpretationPanel({
         </div>
       </article>
 
-      <article className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <article className="metric-tile rounded-[28px] p-5">
         <p className="text-sm font-medium text-white">为什么它不是稳赚看涨</p>
         <p className="mt-4 text-sm leading-7 text-slate-300">
           {recommendation?.summary ?? "你买的是上涨弹性，不是确定性收益。方向看对但时点不对，时间价值和 IV 回落也会让你亏钱。"}
@@ -695,7 +793,7 @@ function LongCallInterpretationPanel({
 
 function MethodologyPanel({ methodology }: { methodology: StandardMethodology }) {
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+    <section className="panel-surface rounded-[32px] p-6">
       <div className="max-w-3xl">
         <p className="text-sm font-medium text-white">算法说明</p>
         <p className="mt-3 text-sm leading-7 text-slate-300">
@@ -708,7 +806,7 @@ function MethodologyPanel({ methodology }: { methodology: StandardMethodology })
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">第一步：过滤掉不合格候选</p>
           <div className="mt-4 grid gap-3">
             {methodology.filters.map((item) => (
-              <article key={item.label} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+              <article key={item.label} className="metric-tile rounded-[24px] p-4">
                 <p className="text-sm font-medium text-white">{item.label}</p>
                 <p className="mt-2 text-sm leading-6 text-slate-400">{item.description}</p>
               </article>
@@ -720,7 +818,7 @@ function MethodologyPanel({ methodology }: { methodology: StandardMethodology })
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">第二步：对剩余候选做综合打分</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {methodology.scoring.map((item) => (
-              <article key={item.label} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+              <article key={item.label} className="metric-tile rounded-[24px] p-4">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium text-white">{item.label}</p>
                   <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-1 text-xs text-cyan-100">
@@ -734,7 +832,7 @@ function MethodologyPanel({ methodology }: { methodology: StandardMethodology })
         </div>
       </div>
 
-      <div className="mt-6 rounded-3xl border border-amber-400/20 bg-amber-400/10 p-5">
+      <div className="mt-6 rounded-[28px] border border-amber-400/20 bg-amber-400/10 p-5">
         <p className="text-sm font-medium text-amber-100">模型边界</p>
         <ul className="mt-3 space-y-3 text-sm leading-7 text-amber-50/90">
           {methodology.notes.map((note) => (
@@ -748,7 +846,7 @@ function MethodologyPanel({ methodology }: { methodology: StandardMethodology })
 
 function SyntheticMethodologyPanel({ methodology }: { methodology: SyntheticMethodology }) {
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+    <section className="panel-surface rounded-[32px] p-6">
       <div className="max-w-3xl">
         <p className="text-sm font-medium text-white">组合算法说明</p>
         <p className="mt-3 text-sm leading-7 text-slate-300">
@@ -761,7 +859,7 @@ function SyntheticMethodologyPanel({ methodology }: { methodology: SyntheticMeth
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">第一步：过滤掉不合格组合</p>
           <div className="mt-4 grid gap-3">
             {methodology.filters.map((item) => (
-              <article key={item.label} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+              <article key={item.label} className="metric-tile rounded-[24px] p-4">
                 <p className="text-sm font-medium text-white">{item.label}</p>
                 <p className="mt-2 text-sm leading-6 text-slate-400">{item.description}</p>
               </article>
@@ -773,7 +871,7 @@ function SyntheticMethodologyPanel({ methodology }: { methodology: SyntheticMeth
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">第二步：给组合打分</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {methodology.scoring.map((item) => (
-              <article key={item.label} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+              <article key={item.label} className="metric-tile rounded-[24px] p-4">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium text-white">{item.label}</p>
                   <span className="rounded-full border border-fuchsia-400/20 bg-fuchsia-400/10 px-2.5 py-1 text-xs text-fuchsia-100">
@@ -787,7 +885,7 @@ function SyntheticMethodologyPanel({ methodology }: { methodology: SyntheticMeth
         </div>
       </div>
 
-      <div className="mt-6 rounded-3xl border border-rose-400/20 bg-rose-400/10 p-5">
+      <div className="mt-6 rounded-[28px] border border-rose-400/20 bg-rose-400/10 p-5">
         <p className="text-sm font-medium text-rose-100">模型边界</p>
         <ul className="mt-3 space-y-3 text-sm leading-7 text-rose-50/90">
           {methodology.notes.map((note) => (
@@ -801,7 +899,7 @@ function SyntheticMethodologyPanel({ methodology }: { methodology: SyntheticMeth
 
 function LongCallStoryPanel() {
   return (
-    <section className="rounded-3xl border border-emerald-400/20 bg-emerald-400/5 p-5">
+    <section className="panel-surface rounded-[32px] p-5">
       <div className="max-w-4xl">
         <p className="text-sm font-medium text-emerald-200">佩洛西打法是什么</p>
         <p className="mt-3 text-sm leading-7 text-slate-200">
@@ -809,7 +907,7 @@ function LongCallStoryPanel() {
         </p>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-slate-950/40 p-4 text-sm leading-7 text-emerald-50/95">
+      <div className="mt-4 metric-tile rounded-[24px] border border-emerald-400/20 bg-emerald-400/8 p-4 text-sm leading-7 text-emerald-50/95">
         <p className="font-medium text-emerald-100">大白话讲解</p>
         <ul className="mt-2 space-y-2">
           <li>- 你不是在收租，你是在花一笔可见的门票钱，买未来半年到一年 BTC 上涨的弹性。</li>
@@ -823,7 +921,7 @@ function LongCallStoryPanel() {
 
 function LongCallMethodologyPanel({ methodology }: { methodology: LongCallMethodology }) {
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+    <section className="panel-surface rounded-[32px] p-6">
       <div className="max-w-3xl">
         <p className="text-sm font-medium text-white">佩洛西打法说明</p>
         <p className="mt-3 text-sm leading-7 text-slate-300">
@@ -831,7 +929,7 @@ function LongCallMethodologyPanel({ methodology }: { methodology: LongCallMethod
         </p>
       </div>
 
-      <div className="mt-6 rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5 text-sm leading-7 text-emerald-50/95">
+      <div className="mt-6 metric-tile rounded-[28px] border border-emerald-400/20 bg-emerald-400/8 p-5 text-sm leading-7 text-emerald-50/95">
         <p className="font-medium text-emerald-100">大白话解释</p>
         <ul className="mt-3 space-y-2">
           <li>- 你不是在收租，而是在花一笔看得见的成本，买未来半年到一年 BTC 上涨的弹性。</li>
@@ -845,7 +943,7 @@ function LongCallMethodologyPanel({ methodology }: { methodology: LongCallMethod
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">第一步：过滤掉不合格 Call</p>
           <div className="mt-4 grid gap-3">
             {methodology.filters.map((item) => (
-              <article key={item.label} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+              <article key={item.label} className="metric-tile rounded-[24px] p-4">
                 <p className="text-sm font-medium text-white">{item.label}</p>
                 <p className="mt-2 text-sm leading-6 text-slate-400">{item.description}</p>
               </article>
@@ -857,7 +955,7 @@ function LongCallMethodologyPanel({ methodology }: { methodology: LongCallMethod
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">第二步：给候选 Call 打分</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {methodology.scoring.map((item) => (
-              <article key={item.label} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+              <article key={item.label} className="metric-tile rounded-[24px] p-4">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium text-white">{item.label}</p>
                   <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-xs text-emerald-100">
@@ -871,7 +969,7 @@ function LongCallMethodologyPanel({ methodology }: { methodology: LongCallMethod
         </div>
       </div>
 
-      <div className="mt-6 rounded-3xl border border-amber-400/20 bg-amber-400/10 p-5">
+      <div className="mt-6 rounded-[28px] border border-amber-400/20 bg-amber-400/10 p-5">
         <p className="text-sm font-medium text-amber-100">模型边界</p>
         <ul className="mt-3 space-y-3 text-sm leading-7 text-amber-50/90">
           {methodology.notes.map((note) => (
@@ -886,7 +984,7 @@ function LongCallMethodologyPanel({ methodology }: { methodology: LongCallMethod
 function SyntheticRecommendationList({ recommendations }: { recommendations: SyntheticLongRecommendation[] }) {
   if (recommendations.length === 0) {
     return (
-      <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-center text-sm leading-7 text-slate-400">
+      <div className="panel-surface rounded-[32px] border-dashed p-8 text-center text-sm leading-7 text-slate-400">
         当前条件下没有找到合适的模拟持有 BTC 组合。你可以放宽周期、调高风险偏好，或增加可用现金后再试。
       </div>
     );
@@ -895,7 +993,7 @@ function SyntheticRecommendationList({ recommendations }: { recommendations: Syn
   return (
     <div className="space-y-4">
       {recommendations.map((item) => (
-        <article key={`${item.pair.call.instrumentName}-${item.pair.put.instrumentName}`} className="rounded-3xl border border-white/10 bg-slate-950/60 p-5 shadow-2xl shadow-black/20">
+        <article key={`${item.pair.call.instrumentName}-${item.pair.put.instrumentName}`} className="panel-surface rounded-[32px] p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
               <p className="text-sm text-fuchsia-200">{item.level}</p>
@@ -904,7 +1002,7 @@ function SyntheticRecommendationList({ recommendations }: { recommendations: Syn
               </h3>
               <p className="mt-3 text-sm leading-7 text-slate-300">{item.summary}</p>
             </div>
-            <div className="grid gap-3 rounded-3xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200 sm:grid-cols-2 lg:min-w-[360px]">
+            <div className="grid gap-3 rounded-[26px] border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-200 sm:grid-cols-2 lg:min-w-[360px]">
               <MiniMetric label="净权利金" value={formatUsdAmount(item.pair.netPremiumUsdPerMinContract)} />
               <MiniMetric label="到期" value={item.pair.expiration} />
               <MiniMetric label="最大张数" value={`${item.maxLots}`} />
@@ -927,13 +1025,13 @@ function SyntheticRecommendationList({ recommendations }: { recommendations: Syn
           </div>
 
           {item.expiryPayoff.scenarios.length > 0 ? (
-            <div className="mt-5 rounded-2xl border border-fuchsia-400/20 bg-fuchsia-400/5 p-4">
+            <div className="mt-5 rounded-[28px] border border-fuchsia-400/20 bg-fuchsia-400/5 p-4">
               <p className="text-sm font-medium text-fuchsia-200">到期损益预估（每张 0.1 BTC）</p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 {item.expiryPayoff.scenarios.map((scenario) => (
-                  <div key={scenario.title} className="rounded-xl border border-white/8 bg-slate-950/40 px-3 py-2">
+                  <div key={scenario.title} className="metric-tile rounded-[20px] px-4 py-3">
                     <p className="text-xs text-slate-400">{scenario.title}</p>
-                    <p className="mt-1 text-sm font-semibold text-white">
+                    <p className="mt-1 text-base font-semibold text-white">
                       {scenario.amountUsd != null
                         ? `${scenario.amountUsd >= 0 ? "+" : ""}$${scenario.amountUsd.toLocaleString()}`
                         : "--"}
@@ -971,14 +1069,16 @@ function InfoListCard({
       ? "border-rose-400/20 bg-rose-400/10 text-rose-50/95"
       : tone === "warning"
         ? "border-amber-400/20 bg-amber-400/10 text-amber-50/95"
-        : "border-white/10 bg-white/5 text-slate-300";
+        : "border-white/10 bg-white/[0.03] text-slate-300";
 
   return (
-    <article className={`rounded-3xl border p-4 ${toneClass}`}>
+    <article className={`rounded-[28px] border p-4 ${toneClass}`}>
       <p className="text-sm font-medium">{title}</p>
       <ul className="mt-3 space-y-3 text-sm leading-7">
         {items.map((item) => (
-          <li key={item}>{item}</li>
+          <li key={item} className="rounded-[18px] border border-white/8 bg-slate-950/35 px-3.5 py-3">
+            {item}
+          </li>
         ))}
       </ul>
     </article>
@@ -987,7 +1087,7 @@ function InfoListCard({
 
 function ReadingHint({ label, description }: { label: string; description: string }) {
   return (
-    <div className="rounded-2xl border border-white/8 bg-slate-950/35 px-4 py-3">
+    <div className="metric-tile rounded-[20px] px-4 py-3">
       <p className="text-sm font-medium text-slate-200">{label}</p>
       <p className="mt-2 text-sm leading-6 text-slate-400">{description}</p>
     </div>
@@ -1000,7 +1100,7 @@ function ExpiryPayoffCard({ payoff }: { payoff: ExpiryPayoff }) {
   }
 
   return (
-    <div className="mt-6 rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-5">
+    <div className="mt-6 rounded-[28px] border border-emerald-400/20 bg-emerald-400/5 p-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <p className="text-sm font-medium text-emerald-200">到期收益预估（每张 0.1 BTC）</p>
         {(payoff.estimatedMonthlyUsd != null || payoff.estimatedAnnualUsd != null) ? (
@@ -1016,7 +1116,7 @@ function ExpiryPayoffCard({ payoff }: { payoff: ExpiryPayoff }) {
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {payoff.scenarios.map((scenario) => (
-          <div key={scenario.title} className="rounded-xl border border-white/8 bg-slate-950/40 px-4 py-3">
+          <div key={scenario.title} className="metric-tile rounded-[20px] px-4 py-3">
             <p className="text-xs text-slate-400">{scenario.title}</p>
             <p className="mt-1 text-base font-semibold text-white">
               {scenario.amountUsd != null
@@ -1048,16 +1148,16 @@ function ExpiryPayoffCard({ payoff }: { payoff: ExpiryPayoff }) {
 
 function MiniMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <div className="text-xs uppercase tracking-[0.18em] text-slate-400">{label}</div>
-      <div className="mt-2 text-lg font-semibold text-white">{value}</div>
+    <div className="metric-tile rounded-[18px] p-3.5">
+      <div className="text-[11px] uppercase tracking-[0.22em] text-slate-500">{label}</div>
+      <div className="mt-2 text-lg font-semibold text-white tabular-nums">{value}</div>
     </div>
   );
 }
 
 function LoadingPanel() {
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-sm text-slate-300">
+    <div className="panel-surface rounded-[32px] p-8 text-sm text-slate-300">
       正在拉取 BTC 价格和期权数据，请稍等。
     </div>
   );
@@ -1065,7 +1165,7 @@ function LoadingPanel() {
 
 function ErrorPanel({ title = "数据加载失败", message }: { title?: string; message: string }) {
   return (
-    <div className="rounded-3xl border border-amber-400/20 bg-amber-400/10 p-6 text-sm leading-7 text-amber-100">
+    <div className="rounded-[32px] border border-amber-400/20 bg-amber-400/10 p-6 text-sm leading-7 text-amber-100">
       <div className="flex items-center gap-2 font-medium text-amber-200">
         <AlertTriangle className="size-4" />
         {title}
@@ -1102,11 +1202,11 @@ function RiskPanel({ strategy }: { strategy: RecommendationInput["strategy"] }) 
             ];
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+    <section className="panel-surface rounded-[32px] p-6">
       <p className="text-sm font-medium text-slate-300">你必须先接受这些风险</p>
       <div className="mt-4 grid gap-3 lg:grid-cols-3">
         {items.map((item) => (
-          <article key={item} className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm leading-7 text-slate-300">
+          <article key={item} className="metric-tile rounded-[24px] p-4 text-sm leading-7 text-slate-300">
             {item}
           </article>
         ))}

@@ -79,7 +79,7 @@ export function PayoffCalculator({
 
   return (
     <section id="calculator" className="scroll-mt-24">
-      <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-6 shadow-lg shadow-black/10">
+      <div className="panel-surface rounded-[32px] p-6">
         <div className="flex items-center gap-3">
           <BarChart3 className="size-5 text-cyan-300" />
           <div>
@@ -88,13 +88,13 @@ export function PayoffCalculator({
           </div>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-white/8 bg-slate-950/40 p-4">
+        <div className="mt-5 metric-tile rounded-[24px] p-4">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-slate-200">合约来源</p>
             <button
               type="button"
               onClick={() => setManualMode(!manualMode)}
-              className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300 transition hover:border-cyan-400/60"
+              className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300 transition hover:border-cyan-400/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16]"
             >
               {manualMode ? "自动填充" : "手动输入"}
             </button>
@@ -149,7 +149,9 @@ export function PayoffCalculator({
 
         {curve && curve.points.length > 0 ? (
           <div className="mt-5">
-            <PayoffSvg curve={curve} underlyingPrice={price} />
+            <div className="metric-tile rounded-[28px] p-4">
+              <PayoffSvg curve={curve} underlyingPrice={price} />
+            </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <MetricCard
@@ -171,7 +173,7 @@ export function PayoffCalculator({
               />
             </div>
 
-            <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-7 text-amber-50/95">
+            <div className="mt-4 rounded-[24px] border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-7 text-amber-50/95">
               <p className="font-medium text-amber-200">怎么看这张图</p>
               <ul className="mt-2 space-y-1">
                 <li>- <span className="text-emerald-300">绿色区域</span>是你赚钱的部分，<span className="text-rose-300">红色区域</span>是你亏钱的部分。</li>
@@ -328,7 +330,7 @@ function PayoffSvg({ curve, underlyingPrice }: { curve: PayoffCurve; underlyingP
 
 function MetricCard({ icon, label, value, hint }: { icon?: React.ReactNode; label: string; value: string; hint: string }) {
   return (
-    <div className="rounded-2xl border border-white/8 bg-slate-950/40 p-4">
+    <div className="metric-tile rounded-[24px] p-4">
       <div className="flex items-center gap-2 text-xs text-slate-400">
         {icon}
         {label}
@@ -356,7 +358,7 @@ function SelectField({ label, value, onChange, options }: { label: string; value
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400"
+        className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16]"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -380,7 +382,7 @@ function NumberField({ label, value, step, onChange }: { label: string; value: n
           const next = Number(e.target.value);
           onChange(Number.isFinite(next) ? next : 0);
         }}
-        className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400"
+        className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16]"
       />
     </label>
   );
