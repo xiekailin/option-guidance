@@ -114,12 +114,12 @@ export const RecommendationSummary = memo(function RecommendationSummary({
               hint: recommendation ? `${recommendation.contract.expiration} 到期` : "等待筛选",
             },
             {
-              label: "单张预估租金",
+              label: "预估总收益",
               value:
                 recommendation?.premiumPerMinContractUsd != null
-                  ? `$${recommendation.premiumPerMinContractUsd.toLocaleString()}`
+                  ? `$${(recommendation.premiumPerMinContractUsd * recommendation.maxLots).toLocaleString()}`
                   : "--",
-              hint: recommendation ? `${recommendation.premiumPerMinContractBtc} BTC` : "基于 0.1 BTC/张",
+              hint: recommendation ? `${recommendation.maxLots} 张 × ${recommendation.premiumPerMinContractBtc} BTC` : "基于 0.1 BTC/张",
             },
             {
               label: "候选数量",

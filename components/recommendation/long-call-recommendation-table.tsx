@@ -36,48 +36,60 @@ export const LongCallRecommendationTable = memo(function LongCallRecommendationT
               <th className="px-3 py-3 sm:px-5 sm:py-4">执行价</th>
               <th className="hidden px-5 py-4 md:table-cell">到期</th>
               <th className="px-3 py-3 sm:px-5 sm:py-4">单张权利金</th>
+              <th className="px-3 py-3 sm:px-5 sm:py-4">可开 / 总成本</th>
               <th className="hidden px-5 py-4 lg:table-cell">盈亏平衡</th>
               <th className="px-3 py-3 sm:px-5 sm:py-4 text-right">操作</th>
             </tr>
           </thead>
           <tbody>
-            {recommendations.map((item) => (
-              <tr key={item.contract.instrumentName} className="border-t border-white/6 transition hover:bg-white/[0.04]">
-                <td className="px-3 py-3 sm:px-5 sm:py-4">
-                  <div className="font-medium text-white">{item.contract.instrumentName}</div>
-                  <div className="mt-1 text-xs text-slate-500">{item.contract.daysToExpiry} 天后到期</div>
-                </td>
-                <td className="whitespace-nowrap px-3 py-3 sm:px-5 sm:py-4 text-white">
-                  ${item.contract.strike.toLocaleString()}
-                  <span className="ml-1.5 text-xs text-slate-500">{item.contract.otmPercent}%</span>
-                </td>
-                <td className="hidden whitespace-nowrap px-5 py-4 md:table-cell">
-                  {item.contract.expiration}
-                </td>
-                <td className="whitespace-nowrap px-3 py-3 sm:px-5 sm:py-4">
-                  <div className="font-medium text-white">
-                    {item.premiumPerMinContractUsd != null
-                      ? `$${item.premiumPerMinContractUsd.toLocaleString()}`
-                      : "--"}
-                  </div>
-                  <div className="mt-0.5 text-xs text-slate-500">{item.premiumPerMinContractBtc} BTC</div>
-                </td>
-                <td className="hidden px-5 py-4 lg:table-cell">
-                  <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${toneStyles[item.tone]}`}>
-                    {item.breakEvenPrice != null ? `$${item.breakEvenPrice.toLocaleString()}` : item.level}
-                  </span>
-                </td>
-                <td className="px-3 py-3 sm:px-5 sm:py-4 text-right">
-                  <button
-                    type="button"
-                    onClick={() => onSelect(item)}
-                    className="min-h-[44px] rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-200 transition hover:border-emerald-400/30 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16]"
-                  >
-                    详情
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {recommendations.map((item) => {
+              const totalCost = item.premiumPerMinContractUsd != null
+                ? item.premiumPerMinContractUsd * item.maxLots
+                : null;
+              return (
+                <tr key={item.contract.instrumentName} className="border-t border-white/6 transition hover:bg-white/[0.04]">
+                  <td className="px-3 py-3 sm:px-5 sm:py-4">
+                    <div className="font-medium text-white">{item.contract.instrumentName}</div>
+                    <div className="mt-1 text-xs text-slate-500">{item.contract.daysToExpiry} 天后到期</div>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 sm:px-5 sm:py-4 text-white">
+                    ${item.contract.strike.toLocaleString()}
+                    <span className="ml-1.5 text-xs text-slate-500">{item.contract.otmPercent}%</span>
+                  </td>
+                  <td className="hidden whitespace-nowrap px-5 py-4 md:table-cell">
+                    {item.contract.expiration}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 sm:px-5 sm:py-4">
+                    <div className="font-medium text-white">
+                      {item.premiumPerMinContractUsd != null
+                        ? `$${item.premiumPerMinContractUsd.toLocaleString()}`
+                        : "--"}
+                    </div>
+                    <div className="mt-0.5 text-xs text-slate-500">{item.premiumPerMinContractBtc} BTC</div>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 sm:px-5 sm:py-4">
+                    <div className="font-medium text-cyan-200">{item.maxLots} 张</div>
+                    <div className="mt-0.5 text-xs text-slate-400">
+                      {totalCost != null ? `≈ $${totalCost.toLocaleString()}` : "--"}
+                    </div>
+                  </td>
+                  <td className="hidden px-5 py-4 lg:table-cell">
+                    <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${toneStyles[item.tone]}`}>
+                      {item.breakEvenPrice != null ? `$${item.breakEvenPrice.toLocaleString()}` : item.level}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3 sm:px-5 sm:py-4 text-right">
+                    <button
+                      type="button"
+                      onClick={() => onSelect(item)}
+                      className="min-h-[44px] rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-200 transition hover:border-emerald-400/30 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16]"
+                    >
+                      详情
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
