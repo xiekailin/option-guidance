@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useRef, type Dispatch, type FocusEvent, type MouseEvent, type ReactNode, type SetStateAction } from "react";
+import { memo, useEffect, useRef, useState, type FocusEvent, type MouseEvent, type ReactNode } from "react";
 import { BarChart3, Activity, CalendarDays, GitCompareArrows, Layers, LineChart, ShieldAlert, Sparkles } from "lucide-react";
 
 export type SectionKey = "market" | "recommendations" | "calculator" | "comparison" | "volatility" | "panorama" | "calendar" | "risk";
@@ -31,14 +31,40 @@ interface SectionNavProps {
   onNavigate: (section: SectionKey, event: MouseEvent<HTMLAnchorElement>) => void;
 }
 
-interface PageSidebarProps extends SectionNavProps {
-  isExpanded: boolean;
-  setIsExpanded: Dispatch<SetStateAction<boolean>>;
-}
-
-export const PageSidebar = memo(function PageSidebar({ activeSection, onNavigate, isExpanded, setIsExpanded }: PageSidebarProps) {
+export const PageSidebar = memo(function PageSidebar({ activeSection, onNavigate }: SectionNavProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const openTimerRef = useRef<number | null>(null);
   const closeTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const clearTimers = () => {
+      if (openTimerRef.current != null) {
+        window.clearTimeout(openTimerRef.current);
+        openTimerRef.current = null;
+      }
+      if (closeTimerRef.current != null) {
+        window.clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+    };
+
+    const handleEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+      clearTimers();
+      setIsExpanded(false);
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape, { capture: true });
+    return () => {
+      document.removeEventListener("keydown", handleEscape, { capture: true });
+      clearTimers();
+    };
+  }, []);
 
   const clearTimers = () => {
     if (openTimerRef.current != null) {
@@ -50,8 +76,6 @@ export const PageSidebar = memo(function PageSidebar({ activeSection, onNavigate
       closeTimerRef.current = null;
     }
   };
-
-  useEffect(() => () => clearTimers(), []);
 
   const openSoon = () => {
     if (isExpanded) {
@@ -98,10 +122,16 @@ export const PageSidebar = memo(function PageSidebar({ activeSection, onNavigate
   };
 
   return (
-    <aside className="hidden xl:fixed xl:left-[max(1rem,calc((100vw-1440px)/2+2rem))] xl:top-1/2 xl:z-50 xl:block xl:-translate-y-1/2">
-      <div onMouseEnter={openSoon} onMouseLeave={closeSoon} onFocusCapture={openNow} onBlurCapture={handleBlur} className="relative">
+    <aside className="hidden xl:fixed xl:left-[max(1rem,calc((100vw-1440px)/2+1.35rem))] xl:top-1/2 xl:z-50 xl:block xl:-translate-y-1/2">
+      <div
+        onMouseEnter={openSoon}
+        onMouseLeave={closeSoon}
+        onFocusCapture={openNow}
+        onBlurCapture={handleBlur}
+        className="relative"
+      >
         <nav aria-label="页面功能导航" className="relative">
-          <div className="panel-surface relative z-10 overflow-hidden rounded-[26px] border-white/8 shadow-[0_10px_24px_-18px_rgba(2,6,23,0.82)]">
+          <div className="panel-surface relative z-20 w-[76px] overflow-hidden rounded-[28px] border-white/8 shadow-[0_12px_28px_-18px_rgba(2,6,23,0.82)]">
             <div className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/20 to-transparent" />
             <div className="space-y-2 px-2 py-2.5">
               {navItems.map((item) => {
@@ -113,38 +143,49 @@ export const PageSidebar = memo(function PageSidebar({ activeSection, onNavigate
                     onClick={(event) => onNavigate(item.key, event)}
                     aria-current={isActive ? "location" : undefined}
                     aria-label={item.label}
-                    className={`group relative flex items-center overflow-hidden rounded-[20px] border py-2.5 transition-[border-color,background-color,box-shadow,padding-right] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16] ${
-                      isExpanded ? "pr-3" : "pr-0"
-                    } ${
+                    className={`group relative flex h-[68px] items-center justify-center overflow-hidden rounded-[20px] border transition-[border-color,background-color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16] ${
                       isActive
                         ? "border-cyan-400/28 bg-[linear-gradient(180deg,rgba(18,50,70,0.9),rgba(9,24,36,0.88))] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_8px_18px_-14px_rgba(34,211,238,0.45)]"
                         : "border-white/6 bg-[linear-gradient(180deg,rgba(7,13,25,0.96),rgba(5,10,18,0.9))] hover:border-cyan-400/14 hover:bg-[linear-gradient(180deg,rgba(11,22,38,0.96),rgba(8,16,28,0.92))]"
                     }`}
                   >
                     <div className={`pointer-events-none absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-cyan-300 transition-opacity duration-150 ${isActive ? "opacity-100" : "opacity-0 group-hover:opacity-30"}`} />
-                    <span className="flex w-[70px] shrink-0 justify-center">
-                      <span
-                        className={`relative flex size-12 items-center justify-center rounded-[18px] border transition-[border-color,background-color,color,transform] duration-150 ${
-                          isActive
-                            ? "border-cyan-300/22 bg-cyan-400/10 text-cyan-100"
-                            : "border-white/7 bg-slate-950/55 text-slate-500 group-hover:border-cyan-400/14 group-hover:bg-cyan-400/[0.04] group-hover:text-slate-200"
-                        }`}
-                      >
-                        <span className={`transition-transform duration-150 ${isActive ? "scale-105" : "group-hover:scale-105"}`}>{item.icon}</span>
-                      </span>
-                    </span>
                     <span
-                      aria-hidden={!isExpanded}
-                      className="min-w-0 overflow-hidden whitespace-nowrap text-[13px] font-medium tracking-[0.02em] text-slate-200 transition-[opacity,max-width,transform] duration-180"
-                      style={{
-                        maxWidth: isExpanded ? 108 : 0,
-                        opacity: isExpanded ? 1 : 0,
-                        transform: `translateX(${isExpanded ? 0 : -8}px)`,
-                      }}
+                      className={`relative flex size-12 items-center justify-center rounded-[18px] border transition-[border-color,background-color,color,transform] duration-150 ${
+                        isActive
+                          ? "border-cyan-300/22 bg-cyan-400/10 text-cyan-100 scale-105"
+                          : "border-white/7 bg-slate-950/55 text-slate-500 group-hover:border-cyan-400/14 group-hover:bg-cyan-400/[0.04] group-hover:text-slate-200 group-hover:scale-105"
+                      }`}
                     >
-                      {item.label}
+                      {item.icon}
                     </span>
                   </a>
+                );
+              })}
+            </div>
+          </div>
+
+          <div
+            aria-hidden={!isExpanded}
+            className={`panel-surface-strong pointer-events-none absolute left-[76px] top-0 z-10 w-[132px] rounded-[26px] border-white/10 shadow-[0_18px_42px_-24px_rgba(2,6,23,0.82)] transition-[opacity,transform] duration-180 ${
+              isExpanded ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-3"
+            }`}
+          >
+            <div className="pointer-events-none absolute inset-y-4 left-0 w-px bg-gradient-to-b from-transparent via-cyan-200/18 to-transparent" />
+            <div className="space-y-2 px-3 py-2.5 pl-4">
+              {navItems.map((item) => {
+                const isActive = item.key === activeSection;
+                return (
+                  <div
+                    key={item.key}
+                    className={`flex h-[68px] items-center rounded-[18px] px-3 text-[12px] font-medium tracking-[0.03em] transition-[background-color,color,transform] duration-150 ${
+                      isActive
+                        ? "bg-[linear-gradient(180deg,rgba(17,49,67,0.46),rgba(8,21,33,0.18))] text-cyan-50"
+                        : "text-slate-300/88"
+                    }`}
+                  >
+                    <span className={`${isActive ? "translate-x-0" : "translate-x-0.5"} transition-transform duration-150`}>{item.label}</span>
+                  </div>
                 );
               })}
             </div>

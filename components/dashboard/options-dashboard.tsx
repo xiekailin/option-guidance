@@ -63,8 +63,12 @@ function getSectionScrollOffset() {
   return window.matchMedia("(min-width: 640px)").matches ? desktopSectionOffset : mobileSectionOffset;
 }
 
-function getSectionScrollBehavior(): ScrollBehavior {
+function getSectionScrollBehavior(forceDesktopPrecision = false): ScrollBehavior {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    return "instant";
+  }
+
+  if (forceDesktopPrecision && window.matchMedia("(min-width: 640px)").matches) {
     return "instant";
   }
 
@@ -78,7 +82,6 @@ export function OptionsDashboard() {
   const [activeSection, setActiveSection] = useState<SectionKey>("recommendations");
   const [showMethodology, setShowMethodology] = useState(false);
   const [showReadingGuide, setShowReadingGuide] = useState(false);
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [isDesktopSectionViewport, setIsDesktopSectionViewport] = useState(() => {
     if (typeof window === "undefined") {
       return true;
@@ -235,7 +238,7 @@ export function OptionsDashboard() {
     pendingSectionRef.current = section;
     setActiveSection(section);
     window.history.pushState(null, "", `#${section}`);
-    scrollToSection(target, getSectionScrollBehavior());
+    scrollToSection(target, getSectionScrollBehavior(true));
     scheduleLockRelease();
   }, [scheduleLockRelease]);
   const handleSelectRecommendation = useCallback((recommendation: Recommendation) => setSelected(recommendation), []);
@@ -404,7 +407,7 @@ export function OptionsDashboard() {
       initialHashLockRef.current = null;
       pendingSectionRef.current = hash;
       setActiveSection(hash);
-      scrollToSection(target, getSectionScrollBehavior());
+      scrollToSection(target, getSectionScrollBehavior(true));
       scheduleLockRelease();
     };
 
@@ -475,12 +478,10 @@ export function OptionsDashboard() {
   return (
     <div className="min-h-screen text-slate-100">
       <div className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
-        <div className="relative flex flex-col gap-4 sm:gap-5 xl:pl-[13.75rem]">
+        <div className="relative flex flex-col gap-4 sm:gap-5 xl:pl-[5.9rem]">
           <PageSidebar
             activeSection={activeSection}
             onNavigate={handleNavigate}
-            isExpanded={isSidebarExpanded}
-            setIsExpanded={setIsSidebarExpanded}
           />
           <PageTabs activeSection={activeSection} onNavigate={handleNavigate} />
 
@@ -596,7 +597,7 @@ export function OptionsDashboard() {
           refreshing={isValidating && !isLoading}
         />
 
-          <div className="min-w-0 space-y-5">
+          <div className="min-w-0 space-y-5 pb-24 sm:pb-32 xl:pb-40">
             <MarketOverviewPanel
               underlyingPrice={ticker?.price}
               volatility={volatility}
@@ -715,7 +716,7 @@ export function OptionsDashboard() {
               panorama={panorama}
             />
 
-            <section id="risk" className="scroll-mt-32 sm:scroll-mt-24">
+            <section id="risk" className="scroll-mt-32 pb-[calc(100vh-18rem)] sm:scroll-mt-24 sm:pb-[calc(100vh-16rem)] xl:pb-[calc(100vh-12rem)]">
               <RiskPanel strategy={input.strategy} />
             </section>
 
