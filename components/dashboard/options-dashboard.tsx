@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import useSWR from "swr";
 import { Activity, AlertTriangle, BookOpen, HelpCircle, RefreshCw } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
@@ -16,7 +16,7 @@ import { VolatilityPanel } from "@/components/dashboard/volatility-panel";
 import { MarketOverviewPanel } from "@/components/dashboard/market-overview-panel";
 import { OptionsPanoramaPanel } from "@/components/dashboard/options-panorama-panel";
 import { StrategyExpiryCalendarPanel } from "@/components/dashboard/strategy-expiry-calendar-panel";
-import { PageSidebar, PageTabs, type TabKey } from "@/components/dashboard/page-sidebar";
+import { PageSidebar, PageTabs, navItems, type SectionKey } from "@/components/dashboard/page-sidebar";
 import { buildRecommendations, getRecommendationMethodology } from "@/lib/domain/recommendation";
 import {
   buildSyntheticLongRecommendations,
@@ -50,13 +50,68 @@ type StandardMethodology = ReturnType<typeof getRecommendationMethodology>;
 type SyntheticMethodology = ReturnType<typeof getSyntheticLongMethodology>;
 type LongCallMethodology = ReturnType<typeof getLongCallMethodology>;
 
+const sectionKeys = navItems.map((item) => item.key);
+const mobileSectionOffset = 128;
+const desktopSectionOffset = 96;
+const sectionAlignmentTolerance = 24;
+
+function isSectionKey(value: string): value is SectionKey {
+  return sectionKeys.includes(value as SectionKey);
+}
+
+function getSectionScrollOffset() {
+  return window.matchMedia("(min-width: 640px)").matches ? desktopSectionOffset : mobileSectionOffset;
+}
+
+function getSectionScrollBehavior(): ScrollBehavior {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    return "instant";
+  }
+
+  return window.matchMedia("(max-width: 639px)").matches ? "instant" : "smooth";
+}
+
 export function OptionsDashboard() {
   const [input, setInput] = useState<RecommendationInput>(defaultInput);
   const [selected, setSelected] = useState<Recommendation | null>(null);
   const [selectedLongCall, setSelectedLongCall] = useState<LongCallRecommendation | null>(null);
-  const [activeTab, setActiveTab] = useState<TabKey>("recommendations");
+  const [activeSection, setActiveSection] = useState<SectionKey>("recommendations");
   const [showMethodology, setShowMethodology] = useState(false);
   const [showReadingGuide, setShowReadingGuide] = useState(false);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const [isDesktopSectionViewport, setIsDesktopSectionViewport] = useState(() => {
+    if (typeof window === "undefined") {
+      return true;
+    }
+
+    return window.matchMedia("(min-width: 640px)").matches;
+  });
+  const pendingSectionRef = useRef<SectionKey | null>(null);
+  const initialHashLockRef = useRef<SectionKey | null>(null);
+  const lockReleaseTimeoutRef = useRef<number | null>(null);
+
+  const cancelLockRelease = useCallback(() => {
+    if (lockReleaseTimeoutRef.current != null) {
+      window.clearTimeout(lockReleaseTimeoutRef.current);
+      lockReleaseTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearSectionLocks = useCallback(() => {
+    pendingSectionRef.current = null;
+    initialHashLockRef.current = null;
+    cancelLockRelease();
+  }, [cancelLockRelease]);
+
+  const scheduleLockRelease = useCallback((delay?: number) => {
+    cancelLockRelease();
+    const resolvedDelay = delay ?? (window.matchMedia("(max-width: 639px)").matches ? 220 : 1200);
+    lockReleaseTimeoutRef.current = window.setTimeout(() => {
+      pendingSectionRef.current = null;
+      initialHashLockRef.current = null;
+      lockReleaseTimeoutRef.current = null;
+    }, resolvedDelay);
+  }, [cancelLockRelease]);
 
   const {
     data: ticker,
@@ -162,7 +217,27 @@ export function OptionsDashboard() {
         options: chain.options,
         volatility,
       });
-  const handleTabChange = useCallback((tab: TabKey) => setActiveTab(tab), []);
+  const handleNavigate = useCallback((section: SectionKey, event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+
+    const scrollToSection = (target: HTMLElement, behavior: ScrollBehavior) => {
+      const offset = getSectionScrollOffset();
+      const top = window.scrollY + target.getBoundingClientRect().top - offset;
+      window.scrollTo({ top: Math.max(top, 0), behavior });
+    };
+
+    const target = document.getElementById(section);
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    initialHashLockRef.current = null;
+    pendingSectionRef.current = section;
+    setActiveSection(section);
+    window.history.pushState(null, "", `#${section}`);
+    scrollToSection(target, getSectionScrollBehavior());
+    scheduleLockRelease();
+  }, [scheduleLockRelease]);
   const handleSelectRecommendation = useCallback((recommendation: Recommendation) => setSelected(recommendation), []);
   const handleSelectLongCall = useCallback((recommendation: LongCallRecommendation) => setSelectedLongCall(recommendation), []);
   const topCoveredCallRecommendation = coveredCallRecommendations[0];
@@ -216,13 +291,203 @@ export function OptionsDashboard() {
               : "用手里的 BTC 持续收租，但接受上涨收益被封顶。",
         };
 
+  useEffect(() => {
+    const viewportQuery = window.matchMedia("(min-width: 640px)");
+    const syncViewport = () => {
+      setIsDesktopSectionViewport((current) => (current === viewportQuery.matches ? current : viewportQuery.matches));
+    };
+
+    syncViewport();
+    viewportQuery.addEventListener("change", syncViewport);
+
+    const sections = sectionKeys
+      .map((id) => document.getElementById(id))
+      .filter((node): node is HTMLElement => node instanceof HTMLElement);
+
+    if (sections.length === 0) {
+      return () => {
+        viewportQuery.removeEventListener("change", syncViewport);
+      };
+    }
+
+    const scrollToSection = (target: HTMLElement, behavior: ScrollBehavior) => {
+      const offset = getSectionScrollOffset();
+      const top = window.scrollY + target.getBoundingClientRect().top - offset;
+      window.scrollTo({ top: Math.max(top, 0), behavior });
+    };
+
+    const updateActiveSection = () => {
+      const offset = getSectionScrollOffset();
+      const maxScrollTop = Math.max(document.documentElement.scrollHeight - window.innerHeight, 0);
+      const hasReachedStableTarget = (rect: DOMRect) => {
+        const desiredTop = window.scrollY + rect.top - offset;
+        const canAlignExactly = desiredTop >= 0 && desiredTop <= maxScrollTop;
+        const isAligned = Math.abs(rect.top - offset) <= sectionAlignmentTolerance;
+        const isVisibleAtViewportAnchor = rect.top <= window.innerHeight * 0.55 && rect.bottom > offset;
+        return isAligned || (!canAlignExactly && isVisibleAtViewportAnchor);
+      };
+
+      const initialHashLock = initialHashLockRef.current;
+      if (initialHashLock) {
+        const lockedTarget = document.getElementById(initialHashLock);
+        if (lockedTarget instanceof HTMLElement) {
+          if (hasReachedStableTarget(lockedTarget.getBoundingClientRect())) {
+            setActiveSection(initialHashLock);
+            pendingSectionRef.current = null;
+            initialHashLockRef.current = null;
+            return;
+          }
+          return;
+        }
+        initialHashLockRef.current = null;
+      }
+
+      const pendingSection = pendingSectionRef.current;
+      if (pendingSection) {
+        const pendingTarget = document.getElementById(pendingSection);
+        if (pendingTarget instanceof HTMLElement) {
+          if (hasReachedStableTarget(pendingTarget.getBoundingClientRect())) {
+            setActiveSection(pendingSection);
+            pendingSectionRef.current = null;
+            return;
+          }
+          return;
+        }
+        pendingSectionRef.current = null;
+      }
+
+      const anchoredSection = [...sections]
+        .filter((section) => {
+          const rect = section.getBoundingClientRect();
+          return rect.top <= offset + sectionAlignmentTolerance && rect.bottom > offset + sectionAlignmentTolerance;
+        })
+        .sort((a, b) => b.getBoundingClientRect().top - a.getBoundingClientRect().top)[0];
+
+      const visibleSections = sections.filter((section) => {
+        const rect = section.getBoundingClientRect();
+        return rect.bottom > offset && rect.top < window.innerHeight * 0.55;
+      });
+      const nextSection = anchoredSection ?? [...(visibleSections.length > 0 ? visibleSections : sections)]
+        .sort((a, b) => {
+          const aTop = Math.abs(a.getBoundingClientRect().top - offset);
+          const bTop = Math.abs(b.getBoundingClientRect().top - offset);
+          return aTop - bTop;
+        })[0];
+
+      const nextId = nextSection?.id;
+      if (nextId && isSectionKey(nextId)) {
+        setActiveSection(nextId);
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      () => {
+        updateActiveSection();
+      },
+      {
+        rootMargin: `${-(isDesktopSectionViewport ? desktopSectionOffset : mobileSectionOffset)}px 0px -55% 0px`,
+        threshold: [0, 0.2, 0.45, 0.7],
+      },
+    );
+
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1);
+      if (!isSectionKey(hash)) {
+        return;
+      }
+
+      const target = document.getElementById(hash);
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+
+      initialHashLockRef.current = null;
+      pendingSectionRef.current = hash;
+      setActiveSection(hash);
+      scrollToSection(target, getSectionScrollBehavior());
+      scheduleLockRelease();
+    };
+
+    sections.forEach((section) => {
+      observer.observe(section);
+    });
+
+    let scrollSyncFrame: number | null = null;
+    const syncActiveSection = () => {
+      if (scrollSyncFrame != null) {
+        return;
+      }
+      scrollSyncFrame = window.requestAnimationFrame(() => {
+        scrollSyncFrame = null;
+        updateActiveSection();
+      });
+    };
+
+    const handleManualScrollIntent = () => {
+      clearSectionLocks();
+      syncActiveSection();
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    window.addEventListener("scroll", syncActiveSection, { passive: true });
+    window.addEventListener("resize", syncActiveSection, { passive: true });
+    window.addEventListener("wheel", handleManualScrollIntent, { passive: true });
+    window.addEventListener("touchmove", handleManualScrollIntent, { passive: true });
+    window.addEventListener("pointerdown", handleManualScrollIntent, { passive: true });
+
+    const initialHash = window.location.hash.slice(1);
+    const timeoutIds: number[] = [];
+    const frame = window.requestAnimationFrame(() => {
+      if (isSectionKey(initialHash)) {
+        initialHashLockRef.current = initialHash;
+        pendingSectionRef.current = initialHash;
+        setActiveSection(initialHash);
+        const target = document.getElementById(initialHash);
+        if (target instanceof HTMLElement) {
+          scrollToSection(target, "instant");
+        }
+        timeoutIds.push(window.setTimeout(() => updateActiveSection(), 120));
+        timeoutIds.push(window.setTimeout(() => updateActiveSection(), 480));
+        return;
+      }
+
+      updateActiveSection();
+    });
+
+    return () => {
+      timeoutIds.forEach((id) => window.clearTimeout(id));
+      window.cancelAnimationFrame(frame);
+      if (scrollSyncFrame != null) {
+        window.cancelAnimationFrame(scrollSyncFrame);
+      }
+      observer.disconnect();
+      window.removeEventListener("hashchange", handleHashChange);
+      window.removeEventListener("scroll", syncActiveSection);
+      window.removeEventListener("resize", syncActiveSection);
+      window.removeEventListener("wheel", handleManualScrollIntent);
+      window.removeEventListener("touchmove", handleManualScrollIntent);
+      window.removeEventListener("pointerdown", handleManualScrollIntent);
+      viewportQuery.removeEventListener("change", syncViewport);
+      cancelLockRelease();
+    };
+  }, [cancelLockRelease, clearSectionLocks, isDesktopSectionViewport, scheduleLockRelease]);
+
   return (
     <div className="min-h-screen text-slate-100">
-      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-4 px-3 py-4 sm:gap-5 sm:px-6 sm:py-6 lg:px-8">
-        <section className="panel-surface-strong data-grid relative overflow-hidden rounded-[24px] p-4 sm:rounded-[36px] sm:p-6 lg:p-7">
-          <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+      <div className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+        <div className="relative flex flex-col gap-4 sm:gap-5 xl:pl-[13.75rem]">
+          <PageSidebar
+            activeSection={activeSection}
+            onNavigate={handleNavigate}
+            isExpanded={isSidebarExpanded}
+            setIsExpanded={setIsSidebarExpanded}
+          />
+          <PageTabs activeSection={activeSection} onNavigate={handleNavigate} />
 
-          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <section className="panel-surface-strong data-grid relative overflow-hidden rounded-[24px] p-4 sm:rounded-[36px] sm:p-6 lg:p-7">
+            <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+
+            <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
               <div className="flex flex-wrap gap-2">
                 <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.28em] ${activeModeMeta.badge}`}>
@@ -327,54 +592,59 @@ export function OptionsDashboard() {
           marketLevel={marketOverview?.brief.title}
           marketHint={marketOverview?.brief.riskNote}
           adviceLabel={marketOverview?.advice.label}
+          loading={isLoading}
+          refreshing={isValidating && !isLoading}
         />
 
-        <PageTabs activeTab={activeTab} onTabChange={handleTabChange} />
+          <div className="min-w-0 space-y-5">
+            <MarketOverviewPanel
+              underlyingPrice={ticker?.price}
+              volatility={volatility}
+              overview={marketOverview}
+              historicalLoading={historicalLoading}
+              historicalError={Boolean(historicalError)}
+            />
 
-        <div className="flex gap-6">
-          <PageSidebar activeTab={activeTab} onTabChange={handleTabChange} />
-
-          <div className="min-w-0 flex-1 space-y-5">
-            {activeTab === "market" && (
-              <MarketOverviewPanel
-                underlyingPrice={ticker?.price}
-                volatility={volatility}
-                overview={marketOverview}
-                historicalLoading={historicalLoading}
-                historicalError={Boolean(historicalError)}
-              />
-            )}
-
-            {activeTab === "recommendations" && (
+            <section id="recommendations" className="scroll-mt-32 sm:scroll-mt-24">
               <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-                <section>
+                <section className="xl:sticky xl:top-6 xl:self-start">
                   <StrategyForm input={input} onChange={setInput} />
                 </section>
 
                 <section className="space-y-5">
-                  {/* 操作按钮行 */}
-                  <div className="panel-surface flex flex-wrap gap-2 rounded-[24px] p-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowReadingGuide(true)}
-                      className={`flex items-center gap-1.5 rounded-[18px] border px-3 py-2 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16] ${activeModeMeta.action}`}
-                    >
-                      <HelpCircle className="size-3.5" />
-                      结果解读
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowMethodology(true)}
-                      className={`flex items-center gap-1.5 rounded-[18px] border px-3 py-2 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16] ${activeModeMeta.action}`}
-                    >
-                      <BookOpen className="size-3.5" />
-                      算法说明
-                    </button>
+                  <div className="sticky top-[calc(env(safe-area-inset-top)+4.75rem)] z-20 -mx-1 rounded-[28px] px-1 py-1 xl:top-[calc(env(safe-area-inset-top)+0.75rem)]">
+                    <div className="panel-surface flex flex-wrap items-center justify-between gap-3 rounded-[24px] p-2.5 shadow-[0_10px_24px_-16px_rgba(2,6,23,0.8)]">
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowReadingGuide(true)}
+                          className={`flex items-center gap-1.5 rounded-[18px] border px-3 py-2 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16] ${activeModeMeta.action}`}
+                        >
+                          <HelpCircle className="size-3.5" />
+                          结果解读
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowMethodology(true)}
+                          className={`flex items-center gap-1.5 rounded-[18px] border px-3 py-2 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16] ${activeModeMeta.action}`}
+                        >
+                          <BookOpen className="size-3.5" />
+                          算法说明
+                        </button>
+                      </div>
+                      <div className="flex min-h-[36px] items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-slate-400" aria-live="polite">
+                        <span className={`inline-flex rounded-full border px-2.5 py-1 ${isLoading ? "border-white/10 bg-white/[0.04] text-slate-300" : isValidating ? "border-cyan-400/20 bg-cyan-400/10 text-cyan-100" : "border-emerald-400/20 bg-emerald-400/10 text-emerald-100"}`}>
+                          {isLoading ? "加载中" : isValidating ? "刷新中" : "已同步"}
+                        </span>
+                        <span className="hidden text-slate-500 sm:inline">
+                          {isLoading ? "正在拉取价格与期权链" : isValidating ? "保留当前内容并后台更新" : "当前结果已是最新一轮"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
                   {isLongCallMode ? <LongCallStoryPanel /> : null}
 
-                  {/* 首选建议 */}
                   {isSyntheticMode ? (
                     <TopSyntheticPanel recommendation={topSyntheticRecommendation} />
                   ) : isLongCallMode ? (
@@ -383,11 +653,10 @@ export function OptionsDashboard() {
                     <TopRecommendationPanel recommendation={topRecommendation} strategy={input.strategy} />
                   )}
 
-                  {/* 推荐列表 */}
                   {hasError ? (
                     <ErrorPanel message={getDisplayErrorMessage(tickerError, chainError)} />
                   ) : isLoading ? (
-                    <LoadingPanel />
+                    <LoadingPanel mode={isLongCallMode ? "long-call" : isSyntheticMode ? "synthetic" : "standard"} />
                   ) : inputErrors.length > 0 ? (
                     <ErrorPanel title="输入需要修正" message={inputErrors.join(" ")} />
                   ) : isSyntheticMode ? (
@@ -405,9 +674,51 @@ export function OptionsDashboard() {
                   )}
                 </section>
               </div>
-            )}
+            </section>
 
-            {/* 结果解读弹框 */}
+            <PayoffCalculator
+              selectedContract={isLongCallMode
+                ? selectedLongCall?.contract ?? topLongCallRecommendation?.contract ?? null
+                : isSyntheticMode
+                  ? topSyntheticRecommendation?.pair.call ?? null
+                  : selected?.contract ?? topRecommendation?.contract ?? null}
+              syntheticPut={isSyntheticMode ? topSyntheticRecommendation?.pair.put : undefined}
+              underlyingPrice={ticker?.price}
+              strategy={input.strategy}
+              availableBtc={input.availableBtc}
+              availableCashUsd={input.availableCashUsd}
+            />
+
+            <StrategyComparison
+              strategy={input.strategy}
+              underlyingPrice={ticker?.price}
+              coveredCallRecommendation={topCoveredCallRecommendation}
+              cashSecuredPutRecommendation={topCashSecuredPutRecommendation}
+              syntheticRecommendation={comparisonSyntheticRecommendation}
+              longCallRecommendation={comparisonLongCallRecommendation}
+              availableBtc={input.availableBtc}
+              availableCashUsd={input.availableCashUsd}
+            />
+
+            <VolatilityPanel
+              options={chain?.options ?? []}
+              underlyingPrice={ticker?.price}
+              historicalPrices={historicalSeries?.points ?? []}
+              historicalLoading={historicalLoading}
+              historicalError={Boolean(historicalError)}
+            />
+
+            <OptionsPanoramaPanel panorama={panorama} underlyingPrice={ticker?.price} />
+
+            <StrategyExpiryCalendarPanel
+              calendarDays={calendarDays}
+              panorama={panorama}
+            />
+
+            <section id="risk" className="scroll-mt-32 sm:scroll-mt-24">
+              <RiskPanel strategy={input.strategy} />
+            </section>
+
             <Dialog open={showReadingGuide} onClose={() => setShowReadingGuide(false)} title={isSyntheticMode ? "这张组合怎么读" : isLongCallMode ? "这张 Call 怎么读" : "推荐结果怎么读"}>
               {isSyntheticMode ? (
                 <SyntheticInterpretationPanel methodology={syntheticMethodology} recommendation={topSyntheticRecommendation} />
@@ -418,7 +729,6 @@ export function OptionsDashboard() {
               )}
             </Dialog>
 
-            {/* 算法说明弹框 */}
             <Dialog open={showMethodology} onClose={() => setShowMethodology(false)} title={isSyntheticMode ? "组合算法说明" : isLongCallMode ? "佩洛西打法说明" : "算法说明"}>
               {isSyntheticMode ? (
                 <SyntheticMethodologyPanel methodology={syntheticMethodology} />
@@ -428,68 +738,25 @@ export function OptionsDashboard() {
                 <MethodologyPanel methodology={standardMethodology} />
               )}
             </Dialog>
-
-            {activeTab === "calculator" && (
-              <PayoffCalculator
-                selectedContract={isLongCallMode
-                  ? selectedLongCall?.contract ?? topLongCallRecommendation?.contract ?? null
-                  : isSyntheticMode
-                    ? topSyntheticRecommendation?.pair.call ?? null
-                    : selected?.contract ?? topRecommendation?.contract ?? null}
-                syntheticPut={isSyntheticMode ? topSyntheticRecommendation?.pair.put : undefined}
-                underlyingPrice={ticker?.price}
-                strategy={input.strategy}
-                availableBtc={input.availableBtc}
-                availableCashUsd={input.availableCashUsd}
-              />
-            )}
-
-            {activeTab === "comparison" && (
-              <StrategyComparison
-                strategy={input.strategy}
-                underlyingPrice={ticker?.price}
-                coveredCallRecommendation={topCoveredCallRecommendation}
-                cashSecuredPutRecommendation={topCashSecuredPutRecommendation}
-                syntheticRecommendation={comparisonSyntheticRecommendation}
-                longCallRecommendation={comparisonLongCallRecommendation}
-                availableBtc={input.availableBtc}
-                availableCashUsd={input.availableCashUsd}
-              />
-            )}
-
-            {activeTab === "volatility" && (
-              <VolatilityPanel
-                options={chain?.options ?? []}
-                underlyingPrice={ticker?.price}
-                historicalPrices={historicalSeries?.points ?? []}
-                historicalLoading={historicalLoading}
-                historicalError={Boolean(historicalError)}
-              />
-            )}
-
-            {activeTab === "panorama" && (
-              <OptionsPanoramaPanel panorama={panorama} underlyingPrice={ticker?.price} />
-            )}
-
-            {activeTab === "calendar" && (
-              <StrategyExpiryCalendarPanel
-                calendarDays={calendarDays}
-                panorama={panorama}
-              />
-            )}
-
-            {activeTab === "risk" && (
-              <RiskPanel strategy={input.strategy} />
-            )}
           </div>
         </div>
       </div>
 
       {!isSyntheticMode && !isLongCallMode ? (
-        <OptionDetailDrawer recommendation={selected} onClose={() => setSelected(null)} />
+        <OptionDetailDrawer
+          recommendation={selected}
+          onClose={() => setSelected(null)}
+          availableBtc={input.availableBtc}
+          availableCashUsd={input.availableCashUsd}
+        />
       ) : null}
       {isLongCallMode ? (
-        <LongCallDetailDrawer recommendation={selectedLongCall} onClose={() => setSelectedLongCall(null)} />
+        <LongCallDetailDrawer
+          recommendation={selectedLongCall}
+          onClose={() => setSelectedLongCall(null)}
+          availableBtc={input.availableBtc}
+          availableCashUsd={input.availableCashUsd}
+        />
       ) : null}
     </div>
   );
@@ -1177,10 +1444,88 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function LoadingPanel() {
+function LoadingPanel({ mode }: { mode: "standard" | "synthetic" | "long-call" }) {
+  if (mode === "synthetic") {
+    return (
+      <div className="space-y-4" aria-live="polite">
+        {Array.from({ length: 2 }).map((_, index) => (
+          <div key={index} className="panel-surface rounded-[32px] p-5">
+            <div className="h-4 w-24 animate-pulse rounded-full bg-white/10" />
+            <div className="mt-4 h-8 w-3/4 animate-pulse rounded-full bg-white/10" />
+            <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-white/10" />
+            <div className="mt-2 h-4 w-2/3 animate-pulse rounded-full bg-white/10" />
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((__, metricIndex) => (
+                <div key={metricIndex} className="metric-tile rounded-[20px] p-4">
+                  <div className="h-3 w-16 animate-pulse rounded-full bg-white/10" />
+                  <div className="mt-3 h-6 w-24 animate-pulse rounded-full bg-white/10" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="panel-surface rounded-[32px] p-8 text-sm text-slate-300">
-      正在拉取 BTC 价格和期权数据，请稍等。
+    <div className="panel-surface rounded-[32px] p-5" aria-live="polite">
+      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="space-y-4">
+          <div className="h-4 w-24 animate-pulse rounded-full bg-white/10" />
+          <div className="h-8 w-3/4 animate-pulse rounded-full bg-white/10" />
+          <div className="h-4 w-full animate-pulse rounded-full bg-white/10" />
+          <div className="h-4 w-2/3 animate-pulse rounded-full bg-white/10" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="metric-tile rounded-[20px] p-4">
+              <div className="h-3 w-16 animate-pulse rounded-full bg-white/10" />
+              <div className="mt-3 h-6 w-24 animate-pulse rounded-full bg-white/10" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5 space-y-3 sm:hidden">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="metric-tile rounded-[24px] p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="h-4 w-3/4 animate-pulse rounded-full bg-white/10" />
+                <div className="mt-3 h-3 w-24 animate-pulse rounded-full bg-white/10" />
+              </div>
+              <div className="h-10 w-16 animate-pulse rounded-full bg-white/10" />
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {Array.from({ length: 4 }).map((__, metricIndex) => (
+                <div key={metricIndex} className="rounded-[18px] border border-white/8 bg-white/[0.03] p-3">
+                  <div className="h-3 w-12 animate-pulse rounded-full bg-white/10" />
+                  <div className="mt-2 h-5 w-16 animate-pulse rounded-full bg-white/10" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 hidden overflow-hidden rounded-[24px] border border-white/6 sm:block">
+        <div className="grid grid-cols-[2.2fr_1fr_1fr_1fr_1fr_0.8fr] gap-0 bg-white/[0.04] px-5 py-4 text-xs uppercase tracking-[0.2em] text-slate-500">
+          {(mode === "long-call"
+            ? ["合约", "执行价", "到期", "单张权利金", "可开 / 总成本", "操作"]
+            : ["合约", "执行价", "到期", "单张租金", "可开 / 总收益", "操作"]
+          ).map((label) => <div key={label}>{label}</div>)}
+        </div>
+        {Array.from({ length: 4 }).map((_, rowIndex) => (
+          <div key={rowIndex} className="grid grid-cols-[2.2fr_1fr_1fr_1fr_1fr_0.8fr] gap-0 border-t border-white/6 px-5 py-4">
+            {Array.from({ length: 6 }).map((__, cellIndex) => (
+              <div key={cellIndex} className="pr-4">
+                <div className={`animate-pulse rounded-full bg-white/10 ${cellIndex === 0 ? "h-4 w-3/4" : cellIndex === 5 ? "h-10 w-16" : "h-4 w-20"}`} />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
