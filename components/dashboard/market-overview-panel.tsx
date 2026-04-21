@@ -1,6 +1,7 @@
 "use client";
 
 import { Activity, Gauge, Layers3, MapPinned } from "lucide-react";
+import { EmptyStateCard } from "@/components/ui/empty-state-card";
 import type { MarketOverviewAnalysis } from "@/lib/domain/market-analysis";
 import type { VolatilityAnalysis } from "@/lib/types/option";
 
@@ -27,30 +28,53 @@ export function MarketOverviewPanel({
 }: MarketOverviewPanelProps) {
   if (!underlyingPrice) {
     return (
-      <section className="panel-surface rounded-[32px] border-dashed p-8 text-center text-sm leading-7 text-slate-400">
-        等待 BTC 行情加载后，再生成市场概览。
+      <section id="market" className="panel-surface scroll-mt-32 rounded-[32px] p-6 sm:scroll-mt-24">
+        <EmptyStateCard
+          icon={Activity}
+          title="市场概览正在等待现价"
+          description="先拿到 BTC 现价，再把趋势、关键位和衍生品情绪拼成一张完整市场简报。"
+          tips={[
+            "价格一到位，这里会先生成一句话市场判断。",
+            "如果长时间为空，优先点顶部刷新按钮重拉行情。",
+          ]}
+          tone="info"
+        />
       </section>
     );
   }
 
   if (!overview) {
     return (
-      <section className="panel-surface rounded-[32px] border-dashed p-8 text-center text-sm leading-7 text-slate-400">
-        市场分析还在准备中，等期权链和历史数据到齐后会补全。
+      <section id="market" className="panel-surface scroll-mt-32 rounded-[32px] p-6 sm:scroll-mt-24">
+        <EmptyStateCard
+          icon={Activity}
+          title="市场分析还在拼装中"
+          description="当前已有部分基础数据，但期权链或历史价格还没完全到齐，所以趋势、关键位和策略建议暂时不完整。"
+          tips={[
+            historicalLoading ? "历史价格还在加载中，趋势和关键位会随后补全。" : "历史价格没到齐时，趋势判断会先缺席。",
+            historicalError ? "历史价格这轮拉取失败了，刷新一次通常就能恢复。" : "期权链加载完成后，衍生品情绪和建议模式会一起出现。",
+          ]}
+          tone="info"
+        />
       </section>
     );
   }
 
   return (
-    <section className="space-y-5">
+    <section id="market" className="space-y-5 scroll-mt-32 sm:scroll-mt-24">
       <div className="panel-surface rounded-[32px] p-6">
         <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr] xl:items-start">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] text-cyan-200">
-              <Activity className="size-3.5" />
-              BTC 市场简报
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-[16px] border border-cyan-400/20 bg-cyan-400/10 text-cyan-200">
+                <Activity className="size-5" />
+              </div>
+              <div>
+                <p className="text-xl font-semibold tracking-tight text-white">BTC 市场简报</p>
+                <p className="mt-1 text-xs text-slate-400">把趋势、关键位和衍生品情绪压成一张可执行判断</p>
+              </div>
             </div>
-            <h2 className="mt-4 text-2xl font-semibold tracking-tight text-white">{overview.brief.title}</h2>
+            <h2 className="mt-5 text-2xl font-semibold tracking-tight text-white">{overview.brief.title}</h2>
             <p className="mt-3 text-sm leading-7 text-slate-300">{overview.brief.summary}</p>
           </div>
           <div className="space-y-4">

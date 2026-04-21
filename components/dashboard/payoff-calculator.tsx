@@ -78,7 +78,7 @@ export function PayoffCalculator({
   }, [legs, price]);
 
   return (
-    <section id="calculator" className="scroll-mt-24">
+    <section id="calculator" className="scroll-mt-32 sm:scroll-mt-24">
       <div className="panel-surface rounded-[32px] p-6">
         <div className="flex items-center gap-3">
           <BarChart3 className="size-5 text-cyan-300" />

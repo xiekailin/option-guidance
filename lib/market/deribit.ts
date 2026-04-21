@@ -8,6 +8,9 @@ import {
 import type { HistoricalPricePoint, OptionContract } from "../types/option";
 
 const DERIBIT_API_BASE = "https://www.deribit.com/api/v2/public";
+const DERIBIT_REQUEST_TIMEOUT_MS = 15_000;
+const DERIBIT_MAX_ATTEMPTS = 2;
+const RETRYABLE_STATUS_CODES = new Set([502, 503, 504]);
 
 export class DeribitApiError extends Error {
   constructor(
@@ -51,40 +54,57 @@ const expirationFormatter = new Intl.DateTimeFormat("zh-CN", {
 });
 
 export async function fetchDeribitJson<T>(path: string): Promise<T> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8_000);
+  let lastError: DeribitApiError | null = null;
 
-  try {
-    const response = await fetch(`${DERIBIT_API_BASE}${path}`, {
-      headers: {
-        Accept: "application/json",
-      },
-      signal: controller.signal,
-    });
+  for (let attempt = 1; attempt <= DERIBIT_MAX_ATTEMPTS; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), DERIBIT_REQUEST_TIMEOUT_MS);
 
-    if (!response.ok) {
-      throw new DeribitApiError("UPSTREAM_BAD_STATUS", `Deribit API request failed: ${response.status}`);
+    try {
+      const response = await fetch(`${DERIBIT_API_BASE}${path}`, {
+        headers: {
+          Accept: "application/json",
+        },
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const statusError = new DeribitApiError("UPSTREAM_BAD_STATUS", `Deribit API request failed: ${response.status}`);
+        if (attempt < DERIBIT_MAX_ATTEMPTS && RETRYABLE_STATUS_CODES.has(response.status)) {
+          lastError = statusError;
+          continue;
+        }
+        throw statusError;
+      }
+
+      const payload = (await response.json()) as Partial<DeribitResult<T>>;
+      if (!("result" in payload)) {
+        throw new DeribitApiError("UPSTREAM_INVALID_PAYLOAD", "Deribit API response missing result field");
+      }
+
+      return payload.result as T;
+    } catch (error) {
+      if (error instanceof DeribitApiError) {
+        throw error;
+      }
+
+      const mappedError =
+        error instanceof Error && error.name === "AbortError"
+          ? new DeribitApiError("UPSTREAM_TIMEOUT", "Deribit API request timed out")
+          : new DeribitApiError("UPSTREAM_BAD_STATUS", "Deribit API request failed");
+
+      if (attempt < DERIBIT_MAX_ATTEMPTS) {
+        lastError = mappedError;
+        continue;
+      }
+
+      throw mappedError;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    const payload = (await response.json()) as Partial<DeribitResult<T>>;
-    if (!("result" in payload)) {
-      throw new DeribitApiError("UPSTREAM_INVALID_PAYLOAD", "Deribit API response missing result field");
-    }
-
-    return payload.result as T;
-  } catch (error) {
-    if (error instanceof DeribitApiError) {
-      throw error;
-    }
-
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new DeribitApiError("UPSTREAM_TIMEOUT", "Deribit API request timed out");
-    }
-
-    throw new DeribitApiError("UPSTREAM_BAD_STATUS", "Deribit API request failed");
-  } finally {
-    clearTimeout(timeoutId);
   }
+
+  throw lastError ?? new DeribitApiError("UPSTREAM_BAD_STATUS", "Deribit API request failed");
 }
 
 export async function fetchBtcIndexPrice(): Promise<number> {

@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { EmptyStateCard } from "@/components/ui/empty-state-card";
+import { SectionHeader } from "@/components/ui/section-header";
 import type { ExpiryCalendarDay, OptionsPanorama } from "@/lib/types/option";
 
 interface StrategyExpiryCalendarPanelProps {
@@ -68,48 +70,53 @@ export function StrategyExpiryCalendarPanel({ calendarDays, panorama }: Strategy
 
   if (!panorama || calendarDays.length === 0) {
     return (
-      <section>
+      <section id="calendar" className="scroll-mt-32 sm:scroll-mt-24">
         <div className="panel-surface rounded-[24px] p-4 sm:rounded-[32px] sm:p-6">
-          <div className="flex items-center gap-3">
-            <CalendarDays className="size-5 text-cyan-300" />
-            <div>
-              <h2 className="text-xl font-semibold text-white">策略到期日历</h2>
-              <p className="mt-1 text-xs text-slate-400">OI 集中度、Max Pain、P/C Ratio 一目了然</p>
-            </div>
-          </div>
-          <div className="mt-5 rounded-2xl border border-dashed border-white/10 bg-white/5 p-8 text-center text-sm text-slate-400">
-            等待期权链数据加载...
-          </div>
+          <SectionHeader
+            icon={CalendarDays}
+            title="策略到期日历"
+            description="OI 集中度、Max Pain、P/C Ratio 一目了然"
+          />
+          <EmptyStateCard
+            icon={CalendarDays}
+            title="到期日历还没拿到可标记的到期日"
+            description="OI 集中度、Max Pain 和 P/C Ratio 都要先从期权链里抽出每个到期日的画像，日历才能真正亮起来。"
+            tips={[
+              "等数据到位后，发光格子会先标出 OI 最集中的到期日。",
+              "点击具体日期后，还会展开当天的 OI 和 Max Pain 细节。",
+            ]}
+            tone="info"
+          />
         </div>
       </section>
     );
   }
 
   return (
-    <section>
+    <section id="calendar" className="scroll-mt-32 sm:scroll-mt-24">
       <div className="panel-surface rounded-[24px] p-4 sm:rounded-[32px] sm:p-6">
-        <div className="flex items-center gap-3">
-          <CalendarDays className="size-5 text-cyan-300" />
-          <div>
-            <h2 className="text-xl font-semibold text-white">策略到期日历</h2>
-            <p className="mt-1 text-xs text-slate-400">OI 集中度、Max Pain、P/C Ratio 一目了然</p>
-          </div>
-        </div>
+        <SectionHeader
+          icon={CalendarDays}
+          title="策略到期日历"
+          description="OI 集中度、Max Pain、P/C Ratio 一目了然"
+        />
 
         {/* 月份导航 */}
         <div className="mt-6 flex items-center justify-between gap-4">
           <button
             type="button"
+            aria-label="查看上个月"
             onClick={() => setViewMonth(new Date(year, month - 1, 1))}
-            className="flex size-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-400 transition hover:border-white/20 hover:text-white"
+            className="flex size-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-400 transition hover:border-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16]"
           >
             <ChevronLeft className="size-4" />
           </button>
           <p className="text-lg font-semibold text-white">{monthLabel}</p>
           <button
             type="button"
+            aria-label="查看下个月"
             onClick={() => setViewMonth(new Date(year, month + 1, 1))}
-            className="flex size-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-400 transition hover:border-white/20 hover:text-white"
+            className="flex size-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-400 transition hover:border-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16]"
           >
             <ChevronRight className="size-4" />
           </button>
@@ -145,7 +152,7 @@ export function StrategyExpiryCalendarPanel({ calendarDays, panorama }: Strategy
                   setSelectedTimestamp(isSelected ? null : expiry.expirationTimestamp);
                 }}
                 className={[
-                  "relative flex aspect-square flex-col items-center justify-center rounded-2xl border transition",
+                  "relative flex aspect-square flex-col items-center justify-center rounded-2xl border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16]",
                   expiry
                     ? oiLevel === "high"
                       ? "border-cyan-400/40 bg-[linear-gradient(135deg,rgba(34,211,238,0.18),rgba(34,211,238,0.06))] shadow-[0_4px_14px_-4px_rgba(34,211,238,0.25)]"
@@ -242,8 +249,9 @@ function ExpandedDayDetail({ day, onClose }: { day: ExpiryCalendarDay; onClose: 
         </div>
         <button
           type="button"
+          aria-label="关闭到期日详情"
           onClick={onClose}
-          className="flex size-8 items-center justify-center rounded-xl border border-white/10 text-slate-400 transition hover:border-white/20 hover:text-white"
+          className="flex size-8 items-center justify-center rounded-xl border border-white/10 text-slate-400 transition hover:border-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16]"
         >
           <X className="size-4" />
         </button>

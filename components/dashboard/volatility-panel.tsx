@@ -2,6 +2,8 @@
 
 import { useMemo } from "react";
 import { Activity } from "lucide-react";
+import { EmptyStateCard } from "@/components/ui/empty-state-card";
+import { SectionHeader } from "@/components/ui/section-header";
 import { analyzeVolatility } from "@/lib/domain/volatility";
 import type { HistoricalPricePoint, OptionContract, VolatilityAnalysis } from "@/lib/types/option";
 
@@ -34,20 +36,25 @@ export function VolatilityPanel({
   const hasData = analysis.atmIv != null;
 
   return (
-    <section id="volatility" className="scroll-mt-24">
+    <section id="volatility" className="scroll-mt-32 sm:scroll-mt-24">
       <div className="panel-surface rounded-[32px] p-6">
-        <div className="flex items-center gap-3">
-          <Activity className="size-5 text-cyan-300" />
-          <div>
-            <h2 className="text-xl font-semibold text-white">波动率分析</h2>
-            <p className="mt-1 text-xs text-slate-400">波动率预期告诉你现在的权利金是贵还是便宜</p>
-          </div>
-        </div>
+        <SectionHeader
+          icon={Activity}
+          title="波动率分析"
+          description="波动率预期告诉你现在的权利金是贵还是便宜"
+        />
 
         {!hasData ? (
-          <div className="mt-5 rounded-2xl border border-dashed border-white/10 bg-white/5 p-8 text-center text-sm text-slate-400">
-            等待期权链数据加载...
-          </div>
+          <EmptyStateCard
+            icon={Activity}
+            title="波动率面板还没开张"
+            description="要先拿到可用期权链，才能判断现在的权利金到底是偏贵、正常还是偏便宜。"
+            tips={[
+              "ATM IV 会先出来，再补齐期限结构和 skew。",
+              historicalLoading ? "历史价格还在加载中，HV 指标会稍后补上。" : historicalError ? "历史价格这轮拉取失败了，先只参考 IV 也可以。" : "如果你刚切换页面，给它几秒钟完成数据同步。",
+            ]}
+            tone="info"
+          />
         ) : (
           <>
             <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">

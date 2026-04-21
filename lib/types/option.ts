@@ -288,6 +288,76 @@ export interface OptionsPanorama {
   totalPutOi: number;
 }
 
+// --- Trade Domain ---
+
+export type TradeSide = "buy" | "sell";
+
+export type TradeEnvironment = "testnet" | "production";
+
+export type TradeMode = "dry-run" | "execute";
+
+export type PreflightCheckKey =
+  | "market_data_complete"
+  | "price_valid"
+  | "slippage_ok"
+  | "balance_sufficient"
+  | "within_limits"
+  | "environment_allowed";
+
+export interface PreflightCheck {
+  key: PreflightCheckKey;
+  passed: boolean;
+  message: string;
+}
+
+export interface TradePreflightResult {
+  passed: boolean;
+  checks: PreflightCheck[];
+  estimatedPremiumUsd: number | null;
+  estimatedCostUsd: number | null;
+  notionalUsd: number;
+}
+
+export interface TradePlan {
+  strategy: StrategyType;
+  side: TradeSide;
+  instrumentName: string;
+  lots: number;
+  contractSizeBtc: number;
+  amountBtc: number;
+  limitPriceBtc: number;
+  limitPriceUsd: number | null;
+  estimatedPremiumUsd: number | null;
+  estimatedCostUsd: number | null;
+  notionalUsd: number;
+  maxLossUsd: number | null;
+  breakEvenPrice: number | null;
+  environment: TradeEnvironment;
+  mode: TradeMode;
+  preflight: TradePreflightResult;
+}
+
+export type OrderLifecycleState =
+  | "submitted"
+  | "open"
+  | "filled"
+  | "partially_filled"
+  | "rejected"
+  | "cancelled";
+
+export interface OrderSummary {
+  orderId: string;
+  state: OrderLifecycleState;
+  instrumentName: string;
+  side: TradeSide;
+  lots: number;
+  amountBtc: number;
+  limitPriceBtc: number;
+  filledAmountBtc: number;
+  environment: TradeEnvironment;
+  createTime: number;
+}
+
 // --- Expiry Calendar ---
 
 export interface ExpiryCalendarDay {

@@ -1,17 +1,28 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { TrendingUp, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { TrendingUp, X, FileText } from "lucide-react";
 import type { LongCallRecommendation } from "@/lib/types/option";
+import { Dialog } from "@/components/ui/dialog";
+import { TradePlanPreview } from "@/components/recommendation/trade-plan-preview";
 
 interface LongCallDetailDrawerProps {
   recommendation: LongCallRecommendation | null;
   onClose: () => void;
+  availableBtc?: number;
+  availableCashUsd?: number;
 }
 
-export function LongCallDetailDrawer({ recommendation, onClose }: LongCallDetailDrawerProps) {
+export function LongCallDetailDrawer({ recommendation, onClose, availableBtc = 0, availableCashUsd = 0 }: LongCallDetailDrawerProps) {
   const drawerRef = useRef<HTMLElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const previousBodyOverflowRef = useRef("");
+  const showTradePlanRef = useRef(false);
+  const [showTradePlan, setShowTradePlan] = useState(false);
+
+  useEffect(() => {
+    showTradePlanRef.current = showTradePlan;
+  }, [showTradePlan]);
 
   useEffect(() => {
     if (!recommendation) {
@@ -19,6 +30,8 @@ export function LongCallDetailDrawer({ recommendation, onClose }: LongCallDetail
     }
 
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    previousBodyOverflowRef.current = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
     const focusFirst = () => {
       const focusable = drawerRef.current?.querySelector<HTMLElement>(
@@ -31,6 +44,10 @@ export function LongCallDetailDrawer({ recommendation, onClose }: LongCallDetail
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (showTradePlanRef.current) {
+          return;
+        }
+
         onClose();
         return;
       }
@@ -65,6 +82,7 @@ export function LongCallDetailDrawer({ recommendation, onClose }: LongCallDetail
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousBodyOverflowRef.current;
       previousFocusRef.current?.focus();
     };
   }, [recommendation, onClose]);
@@ -204,6 +222,26 @@ export function LongCallDetailDrawer({ recommendation, onClose }: LongCallDetail
             ))}
           </ul>
         </Section>
+
+        {/* Trade plan preview */}
+        <div className="mt-8 border-t border-white/5 pt-6">
+          <button
+            type="button"
+            onClick={() => setShowTradePlan(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16]"
+          >
+            <FileText className="size-4" />
+            生成交易计划
+          </button>
+        </div>
+
+        <Dialog open={showTradePlan} onClose={() => setShowTradePlan(false)} title="dry-run 计划" subtitle="交易计划预览" size="sm">
+          <TradePlanPreview
+            recommendation={recommendation}
+            availableBtc={availableBtc}
+            availableCashUsd={availableCashUsd}
+          />
+        </Dialog>
       </aside>
     </div>
   );

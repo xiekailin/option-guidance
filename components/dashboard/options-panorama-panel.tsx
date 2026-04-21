@@ -1,6 +1,8 @@
 "use client";
 
 import { Layers } from "lucide-react";
+import { EmptyStateCard } from "@/components/ui/empty-state-card";
+import { SectionHeader } from "@/components/ui/section-header";
 import type { OptionsPanorama } from "@/lib/types/option";
 
 interface OptionsPanoramaPanelProps {
@@ -13,18 +15,23 @@ export function OptionsPanoramaPanel({ panorama, underlyingPrice }: OptionsPanor
 
   if (!panorama || panorama.putCallRatios.length === 0) {
     return (
-      <section>
+      <section id="panorama" className="scroll-mt-32 sm:scroll-mt-24">
         <div className="panel-surface rounded-[24px] p-4 sm:rounded-[32px] sm:p-6">
-          <div className="flex items-center gap-3">
-            <Layers className="size-5 text-cyan-300" />
-            <div>
-              <h2 className="text-xl font-semibold text-white">期权全景</h2>
-              <p className="mt-1 text-xs text-slate-400">持仓分布、市场情绪、Max Pain 一图看完</p>
-            </div>
-          </div>
-          <div className="mt-5 rounded-2xl border border-dashed border-white/10 bg-white/5 p-8 text-center text-sm text-slate-400">
-            等待期权链数据加载...
-          </div>
+          <SectionHeader
+            icon={Layers}
+            title="期权全景"
+            description="持仓分布、市场情绪、Max Pain 一图看完"
+          />
+          <EmptyStateCard
+            icon={Layers}
+            title="期权全景还在等完整期权链"
+            description="Put/Call Ratio、Max Pain 和 OI 热力图都依赖同一批期权链数据，所以会在数据齐了之后一起出现。"
+            tips={[
+              "先有期权链，才能看到全市场偏多还是偏空。",
+              "如果刚打开页面，这里通常会比推荐列表晚一步补齐。",
+            ]}
+            tone="info"
+          />
         </div>
       </section>
     );
@@ -33,15 +40,13 @@ export function OptionsPanoramaPanel({ panorama, underlyingPrice }: OptionsPanor
   const overallSentiment = getSentiment(panorama.overallOiRatio);
 
   return (
-    <section>
+    <section id="panorama" className="scroll-mt-32 sm:scroll-mt-24">
       <div className="panel-surface rounded-[24px] p-4 sm:rounded-[32px] sm:p-6">
-        <div className="flex items-center gap-3">
-          <Layers className="size-5 text-cyan-300" />
-          <div>
-            <h2 className="text-xl font-semibold text-white">期权全景</h2>
-            <p className="mt-1 text-xs text-slate-400">持仓分布、市场情绪、Max Pain 一图看完</p>
-          </div>
-        </div>
+        <SectionHeader
+          icon={Layers}
+          title="期权全景"
+          description="持仓分布、市场情绪、Max Pain 一图看完"
+        />
 
         {/* 区块 A: P/C Ratio 总览 */}
         <div className="mt-6">

@@ -18,6 +18,8 @@ interface RecommendationSummaryProps {
   marketHint?: string;
   marketLevel?: string;
   adviceLabel?: string;
+  loading?: boolean;
+  refreshing?: boolean;
 }
 
 export const RecommendationSummary = memo(function RecommendationSummary({
@@ -32,6 +34,8 @@ export const RecommendationSummary = memo(function RecommendationSummary({
   marketHint,
   marketLevel,
   adviceLabel,
+  loading = false,
+  refreshing = false,
 }: RecommendationSummaryProps) {
   const cards =
     strategy === "synthetic-long"
@@ -162,13 +166,26 @@ export const RecommendationSummary = memo(function RecommendationSummary({
       <div className="relative">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.28em] ${theme.chip}`}>
-              实时摘要
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.28em] ${theme.chip}`}>
+                实时摘要
+              </span>
+              {refreshing && !loading ? (
+                <span className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-slate-300">
+                  后台刷新中
+                </span>
+              ) : null}
+            </div>
             <h2 className="mt-4 text-lg font-semibold tracking-tight text-white sm:text-2xl">{theme.title}</h2>
             <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-400">{theme.description}</p>
           </div>
-          {updatedAt ? (
+          {loading ? (
+            <div className="metric-tile rounded-[24px] px-4 py-3 text-left lg:min-w-[240px]">
+              <div className="h-3 w-16 animate-pulse rounded-full bg-white/10" />
+              <div className="mt-3 h-5 w-36 animate-pulse rounded-full bg-white/10" />
+              <div className="mt-2 h-3 w-24 animate-pulse rounded-full bg-white/10" />
+            </div>
+          ) : updatedAt ? (
             <div className="metric-tile rounded-[24px] px-4 py-3 text-left lg:min-w-[240px]">
               <p className="text-[11px] uppercase tracking-[0.28em] text-slate-500">最近更新</p>
               <p className="mt-2 text-sm font-medium text-slate-100">{new Date(updatedAt).toLocaleString()}</p>
@@ -183,11 +200,21 @@ export const RecommendationSummary = memo(function RecommendationSummary({
               key={card.label}
               className={`metric-tile rounded-[22px] p-4 sm:rounded-[26px] sm:p-5 ${index === 0 ? "xl:col-span-4" : "xl:col-span-2"}`}
             >
-              <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">{card.label}</p>
-              <p className={`mt-3 font-semibold tracking-tight tabular-nums text-white ${index === 0 ? "text-4xl sm:text-[2.6rem]" : "text-2xl"}`}>
-                {card.value}
-              </p>
-              <p className="mt-2 text-xs leading-6 text-slate-400">{card.hint}</p>
+              {loading ? (
+                <>
+                  <div className="h-3 w-16 animate-pulse rounded-full bg-white/10" />
+                  <div className={`mt-4 animate-pulse rounded-full bg-white/10 ${index === 0 ? "h-10 w-40 sm:h-12 sm:w-48" : "h-8 w-28"}`} />
+                  <div className="mt-3 h-3 w-24 animate-pulse rounded-full bg-white/10" />
+                </>
+              ) : (
+                <>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">{card.label}</p>
+                  <p className={`mt-3 font-semibold tracking-tight tabular-nums text-white ${index === 0 ? "text-4xl sm:text-[2.6rem]" : "text-2xl"}`}>
+                    {card.value}
+                  </p>
+                  <p className="mt-2 text-xs leading-6 text-slate-400">{card.hint}</p>
+                </>
+              )}
             </article>
           ))}
         </div>

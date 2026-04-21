@@ -199,7 +199,7 @@ export function StrategyComparison({
   };
 
   return (
-    <section className="scroll-mt-24">
+    <section id="comparison" className="scroll-mt-32 sm:scroll-mt-24">
       <div className="panel-surface rounded-[32px] p-6">
         <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
