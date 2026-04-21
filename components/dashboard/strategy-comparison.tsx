@@ -1,5 +1,6 @@
 "use client";
 
+import { useId, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { ShieldAlert, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import type {
   LongCallRecommendation,
@@ -26,7 +27,41 @@ interface RadarPoint {
   color: string;
 }
 
-const dimensions = ["收益率", "安全性", "资金效率", "灵活性", "简单程度"];
+type RadarDimensionKey = "yield" | "safety" | "capital-efficiency" | "flexibility" | "simplicity";
+
+interface RadarDimension {
+  key: RadarDimensionKey;
+  label: string;
+  description: string;
+}
+
+const dimensions: RadarDimension[] = [
+  {
+    key: "yield",
+    label: "收益率",
+    description: "看的是这类策略在判断正确时，单期收益上限和回报弹性有多强，越高代表赚钱效率越猛。",
+  },
+  {
+    key: "safety",
+    label: "安全性",
+    description: "看的是最坏情况下亏损是否容易失控、普通投资者是否更容易扛住，越高代表容错越强。",
+  },
+  {
+    key: "capital-efficiency",
+    label: "资金效率",
+    description: "看的是为了表达同样观点，需要锁住多少现金或现货，越高代表更省本金、更轻仓。",
+  },
+  {
+    key: "flexibility",
+    label: "灵活性",
+    description: "看的是你能否根据行情变化快速调整、换仓或退出，越高代表操作空间越大。",
+  },
+  {
+    key: "simplicity",
+    label: "简单程度",
+    description: "看的是这类策略是否容易理解、执行和重复操作，越高代表越接近直觉、上手成本更低。",
+  },
+];
 
 const radarData: RadarPoint[] = [
   {
@@ -56,84 +91,147 @@ const radarData: RadarPoint[] = [
 ];
 
 function RadarChart() {
+  const [activeDimension, setActiveDimension] = useState<RadarDimensionKey | null>(null);
   const n = dimensions.length;
   const cx = 150;
   const cy = 150;
   const maxR = 110;
   const angleStep = (2 * Math.PI) / n;
   const startAngle = -Math.PI / 2;
+  const descriptionId = useId().replace(/:/g, "");
+  const activeDimensionData = dimensions.find((dimension) => dimension.key === activeDimension) ?? null;
 
   const toX = (i: number, r: number) => cx + r * Math.cos(startAngle + i * angleStep);
   const toY = (i: number, r: number) => cy + r * Math.sin(startAngle + i * angleStep);
   const rings = [0.2, 0.4, 0.6, 0.8, 1.0];
 
+  const clearActiveDimension = () => setActiveDimension(null);
+
+  const handleLabelKeyDown = (event: ReactKeyboardEvent<SVGRectElement>, key: RadarDimensionKey) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      setActiveDimension(key);
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      clearActiveDimension();
+      event.currentTarget.blur();
+    }
+  };
+
   return (
-    <svg viewBox="0 0 300 300" className="mx-auto w-full max-w-xs">
-      {rings.map((ring) => (
-        <polygon
-          key={ring}
-          points={Array.from({ length: n }, (_, i) => `${toX(i, maxR * ring)},${toY(i, maxR * ring)}`).join(" ")}
-          fill="none"
-          stroke="rgb(148 163 184)"
-          strokeWidth="0.5"
-          strokeOpacity="0.25"
-        />
-      ))}
+    <div className="mx-auto w-full max-w-sm">
+      <div className="relative rounded-[22px]">
+        <span id={descriptionId} className="sr-only">
+          可悬停或使用 Tab 聚焦雷达图维度标签，查看每个评分维度的解释。
+        </span>
+        <svg viewBox="0 0 300 300" className="mx-auto w-full max-w-sm" preserveAspectRatio="xMidYMid meet">
+          {rings.map((ring) => (
+            <polygon
+              key={ring}
+              points={Array.from({ length: n }, (_, i) => `${toX(i, maxR * ring)},${toY(i, maxR * ring)}`).join(" ")}
+              fill="none"
+              stroke="rgb(148 163 184)"
+              strokeWidth="0.5"
+              strokeOpacity="0.25"
+            />
+          ))}
 
-      {Array.from({ length: n }, (_, i) => (
-        <line
-          key={i}
-          x1={cx}
-          y1={cy}
-          x2={toX(i, maxR)}
-          y2={toY(i, maxR)}
-          stroke="rgb(148 163 184)"
-          strokeWidth="0.5"
-          strokeOpacity="0.25"
-        />
-      ))}
+          {Array.from({ length: n }, (_, i) => {
+            const isActive = dimensions[i]?.key === activeDimension;
+            return (
+              <line
+                key={i}
+                x1={cx}
+                y1={cy}
+                x2={toX(i, maxR)}
+                y2={toY(i, maxR)}
+                stroke={isActive ? "rgb(103 232 249)" : "rgb(148 163 184)"}
+                strokeWidth={isActive ? "1.1" : "0.5"}
+                strokeOpacity={isActive ? "0.9" : "0.25"}
+              />
+            );
+          })}
 
-      {radarData.map((point) => (
-        <polygon
-          key={point.strategy}
-          points={point.scores.map((score, i) => `${toX(i, (score / 100) * maxR)},${toY(i, (score / 100) * maxR)}`).join(" ")}
-          fill={point.color}
-          fillOpacity="0.1"
-          stroke={point.color}
-          strokeWidth="1.5"
-        />
-      ))}
+          {radarData.map((point) => (
+            <polygon
+              key={point.strategy}
+              points={point.scores.map((score, i) => `${toX(i, (score / 100) * maxR)},${toY(i, (score / 100) * maxR)}`).join(" ")}
+              fill={point.color}
+              fillOpacity="0.1"
+              stroke={point.color}
+              strokeWidth="1.5"
+            />
+          ))}
 
-      {dimensions.map((dim, i) => {
-        const labelR = maxR + 18;
-        const x = toX(i, labelR);
-        const y = toY(i, labelR);
-        const anchor = i === 0 ? "middle" : i < n / 2 ? "start" : i === Math.floor(n / 2) ? "middle" : "end";
-        return (
-          <text
-            key={dim}
-            x={x}
-            y={y}
-            textAnchor={anchor}
-            dominantBaseline="central"
-            fill="rgb(148 163 184)"
-            fontSize="11"
-            fontFamily="sans-serif"
-          >
-            {dim}
-          </text>
-        );
-      })}
+          {dimensions.map((dimension, i) => {
+            const labelR = maxR + 18;
+            const x = toX(i, labelR);
+            const y = toY(i, labelR);
+            const anchor = i === 0 ? "middle" : i < n / 2 ? "start" : i === Math.floor(n / 2) ? "middle" : "end";
+            const isActive = dimension.key === activeDimension;
+            const estimatedWidth = dimension.label.length * 13 + 24;
+            const hitX = anchor === "middle" ? x - estimatedWidth / 2 : anchor === "start" ? x - 8 : x - estimatedWidth + 8;
+            return (
+              <g key={dimension.key}>
+                <rect
+                  x={hitX}
+                  y={y - 13}
+                  width={estimatedWidth}
+                  height={26}
+                  rx={10}
+                  ry={10}
+                  fill={isActive ? "rgba(34,211,238,0.12)" : "rgba(8,16,28,0.001)"}
+                  stroke={isActive ? "rgba(103,232,249,0.55)" : "transparent"}
+                  strokeWidth="1"
+                  tabIndex={0}
+                  role="button"
+                  aria-describedby={descriptionId}
+                  aria-label={`${dimension.label}：${dimension.description}`}
+                  style={{ cursor: "pointer" }}
+                  onPointerEnter={() => setActiveDimension(dimension.key)}
+                  onPointerLeave={clearActiveDimension}
+                  onFocus={() => setActiveDimension(dimension.key)}
+                  onBlur={clearActiveDimension}
+                  onKeyDown={(event) => handleLabelKeyDown(event, dimension.key)}
+                />
+                <text
+                  x={x}
+                  y={y}
+                  textAnchor={anchor}
+                  dominantBaseline="central"
+                  fill={isActive ? "rgb(224 242 254)" : "rgb(148 163 184)"}
+                  fontSize="11"
+                  fontFamily="sans-serif"
+                  pointerEvents="none"
+                >
+                  {dimension.label}
+                </text>
+              </g>
+            );
+          })}
 
-      {radarData.map((point, idx) => (
-        <g key={point.strategy} transform={`translate(${8 + idx * 72}, 285)`}>
-          <circle cx="5" cy="-3" r="4" fill={point.color} />
-          <text x="12" y="0" fill="rgb(203 213 225)" fontSize="10" fontFamily="sans-serif">
-            {point.label}
-          </text>
-        </g>
-      ))}
-    </svg>
+          {radarData.map((point, idx) => (
+            <g key={point.strategy} transform={`translate(${8 + idx * 72}, 285)`}>
+              <circle cx="5" cy="-3" r="4" fill={point.color} />
+              <text x="12" y="0" fill="rgb(203 213 225)" fontSize="10" fontFamily="sans-serif">
+                {point.label}
+              </text>
+            </g>
+          ))}
+        </svg>
+      </div>
+
+      <div className="mt-4 rounded-[18px] border border-cyan-400/16 bg-[#07111d]/88 p-3.5 shadow-[0_12px_28px_-18px_rgba(2,6,23,0.88)] backdrop-blur-sm">
+        <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-200/75">维度解释</p>
+        <p className="mt-1.5 text-sm font-semibold text-white">{activeDimensionData?.label ?? "悬停维度查看解释"}</p>
+        <p className="mt-2 text-xs leading-6 text-slate-400">
+          {activeDimensionData?.description ?? "把鼠标移到雷达图的维度标签上，或使用 Tab 聚焦标签，就会看到这个维度在当前策略对比里的含义。"}
+        </p>
+      </div>
+    </div>
   );
 }
 

@@ -14,6 +14,7 @@ export function calculatePayoffCurve(
   const step = (maxPrice - minPrice) / stepCount;
 
   const points: PayoffPoint[] = [];
+  const breakEvenSamples: PayoffPoint[] = [];
   let maxProfit = -Infinity;
   let maxLoss = Infinity;
 
@@ -22,17 +23,18 @@ export function calculatePayoffCurve(
     let totalPnl = 0;
 
     for (const leg of legs) {
-      const legPnl = calculateLegPayoff(leg, priceAtExpiry);
+      const legPnl = calculateLegPayoff(leg, priceAtExpiry, underlyingPrice);
       totalPnl += legPnl;
     }
 
     if (totalPnl > maxProfit) maxProfit = totalPnl;
     if (totalPnl < maxLoss) maxLoss = totalPnl;
 
+    breakEvenSamples.push({ priceAtExpiry, pnl: totalPnl });
     points.push({ priceAtExpiry, pnl: roundTo(totalPnl, 2) });
   }
 
-  const breakEvenPrice = findBreakEven(points);
+  const breakEvenPrice = findBreakEven(breakEvenSamples);
 
   return {
     points,
@@ -42,9 +44,9 @@ export function calculatePayoffCurve(
   };
 }
 
-function calculateLegPayoff(leg: PayoffLeg, priceAtExpiry: number): number {
+function calculateLegPayoff(leg: PayoffLeg, priceAtExpiry: number, underlyingPrice: number): number {
   const { direction, optionType, strike, premium, contractSize } = leg;
-  const premiumUsd = premium * contractSize;
+  const premiumUsd = premium * underlyingPrice * contractSize;
   const sign = direction === "long" ? 1 : -1;
 
   let intrinsicValue = 0;
@@ -61,8 +63,21 @@ function findBreakEven(points: PayoffPoint[]): number | null {
   for (let i = 1; i < points.length; i++) {
     const prev = points[i - 1].pnl;
     const curr = points[i].pnl;
-    if ((prev <= 0 && curr >= 0) || (prev >= 0 && curr <= 0)) {
-      const fraction = Math.abs(prev) / (Math.abs(prev) + Math.abs(curr) || 1);
+
+    if (prev === 0 && curr === 0) {
+      continue;
+    }
+
+    if (prev === 0) {
+      return points[i - 1].priceAtExpiry;
+    }
+
+    if (curr === 0) {
+      return points[i].priceAtExpiry;
+    }
+
+    if ((prev < 0 && curr > 0) || (prev > 0 && curr < 0)) {
+      const fraction = Math.abs(prev) / (Math.abs(prev) + Math.abs(curr));
       return roundTo(points[i - 1].priceAtExpiry + fraction * (points[i].priceAtExpiry - points[i - 1].priceAtExpiry), 0);
     }
   }
