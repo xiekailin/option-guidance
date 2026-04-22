@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import useSWR from "swr";
-import { Activity, AlertTriangle, BookOpen, HelpCircle, RefreshCw } from "lucide-react";
+import { Activity, AlertTriangle, ArrowUpRight, BookOpen, HelpCircle, RefreshCw } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { RecommendationSummary } from "@/components/dashboard/recommendation-summary";
 import { OptionDetailDrawer } from "@/components/recommendation/option-detail-drawer";
@@ -564,18 +565,27 @@ export function OptionsDashboard() {
                     });
                   }}
                 />
-                <button
-                  type="button"
-                  aria-label="刷新数据"
-                  onClick={() => {
-                    void refreshTicker();
-                    void refreshChain();
-                  }}
-                  className={`flex h-[52px] shrink-0 items-center justify-center rounded-[20px] border px-4 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16] ${activeModeMeta.action}`}
-                  title="刷新数据"
-                >
-                  <RefreshCw className={`size-4 ${isValidating ? "animate-spin" : ""}`} />
-                </button>
+                <div className="flex items-center gap-3">
+                  <Link
+                    href="/newPages2"
+                    className="flex h-[52px] items-center gap-2 rounded-[20px] border border-white/12 bg-white/[0.04] px-4 text-sm font-medium text-slate-100 transition hover:border-cyan-300/35 hover:bg-white/[0.07] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16]"
+                  >
+                    <span>进入 2.0</span>
+                    <ArrowUpRight className="size-4" />
+                  </Link>
+                  <button
+                    type="button"
+                    aria-label="刷新数据"
+                    onClick={() => {
+                      void refreshTicker();
+                      void refreshChain();
+                    }}
+                    className={`flex h-[52px] shrink-0 items-center justify-center rounded-[20px] border px-4 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16] ${activeModeMeta.action}`}
+                    title="刷新数据"
+                  >
+                    <RefreshCw className={`size-4 ${isValidating ? "animate-spin" : ""}`} />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -717,7 +727,10 @@ export function OptionsDashboard() {
             />
 
             <section id="risk" className="scroll-mt-32 pb-[calc(100vh-18rem)] sm:scroll-mt-24 sm:pb-[calc(100vh-16rem)] xl:pb-[calc(100vh-12rem)]">
-              <RiskPanel strategy={input.strategy} />
+              <RiskPanel
+                strategy={input.strategy}
+                recommendation={isSyntheticMode ? topSyntheticRecommendation : isLongCallMode ? topLongCallRecommendation : topRecommendation}
+              />
             </section>
 
             <Dialog open={showReadingGuide} onClose={() => setShowReadingGuide(false)} title={isSyntheticMode ? "这张组合怎么读" : isLongCallMode ? "这张 Call 怎么读" : "推荐结果怎么读"}>
@@ -1543,42 +1556,437 @@ function ErrorPanel({ title = "数据加载失败", message }: { title?: string;
   );
 }
 
-function RiskPanel({ strategy }: { strategy: RecommendationInput["strategy"] }) {
-  const items =
-    strategy === "covered-call"
-      ? [
-          "持有 BTC 卖看涨的核心代价不是亏损无限，而是 BTC 大涨时你的上涨收益会被封顶。",
-          "越短周期的合约，时间衰减带来的租金收得更快，但临近到期的价格跳动也更敏感。",
-          "参考价不等于真实成交价，流动性低的合约要特别注意买卖价差。",
-        ]
-      : strategy === "cash-secured-put"
-        ? [
-            "卖看跌准备接货的核心风险是 BTC 大跌时，你会在约定价被迫按约定价买入 BTC。",
-            "低触发概率只能降低被迫接货的可能性，不代表你不会接货。",
-            "高波动率预期确实让租金更厚，但通常也意味着市场预期接下来波动更大。",
-          ]
-        : strategy === "long-call"
-          ? [
-              "佩洛西打法的最大亏损虽然锁定在权利金，但这笔亏损仍可能是 100% 权利金，不能把“有限亏损”理解成“亏不多”。",
-              "方向看对但时间不对也会亏钱；BTC 涨得太慢，时间价值衰减会持续吃掉这张 Call 的价格。",
-              "如果你是在高 IV 环境里买入，后面即使 BTC 没怎么跌，IV 回落也会压缩期权价值。",
-            ]
-          : [
-              "模拟持有 BTC 的组合不是稳定收租，而是强烈看涨的操作。",
-              "暴跌时风险主要来自卖出的看跌期权，下跌时的亏损会明显大于只买看涨期权。",
-              "如果账户不是全现金担保，还要额外考虑押金波动和追加押金的压力。",
-            ];
+interface RiskScenarioCard {
+  id: string;
+  title: string;
+  description: string;
+  tone: "rose" | "amber" | "cyan" | "fuchsia" | "emerald";
+  signalLabel: string;
+  linkedRisk: string;
+  linkedCheck: string;
+}
+
+interface RiskViewModel {
+  summary: string;
+  coreRisks: string[];
+  scenarioReminders: Array<{ title: string; description: string }>;
+  disciplineChecks: string[];
+  scenarioCards: RiskScenarioCard[];
+}
+
+function RiskPanel({
+  strategy,
+  recommendation,
+}: {
+  strategy: RecommendationInput["strategy"];
+  recommendation?: Recommendation | LongCallRecommendation | SyntheticLongRecommendation;
+}) {
+  const fallback = getDefaultRiskView(strategy);
+  const riskView = buildRiskViewModel(strategy, recommendation) ?? fallback;
 
   return (
-    <section className="panel-surface rounded-[32px] p-6">
-      <p className="text-sm font-medium text-slate-300">你必须先接受这些风险</p>
-      <div className="mt-4 grid gap-3 lg:grid-cols-3">
-        {items.map((item) => (
-          <article key={item} className="metric-tile rounded-[24px] p-4 text-sm leading-7 text-slate-300">
-            {item}
+    <RiskPanelStage
+      key={`${strategy}-${recommendationKey(recommendation)}`}
+      riskView={riskView}
+    />
+  );
+}
+
+function RiskPanelStage({ riskView }: { riskView: RiskViewModel }) {
+  const [activeScenarioIndex, setActiveScenarioIndex] = useState(0);
+  const scenarioButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const activeScenario = riskView.scenarioCards[activeScenarioIndex] ?? riskView.scenarioCards[0];
+  const activeTabId = `risk-scenario-tab-${activeScenario.id}`;
+  const activePanelId = `risk-scenario-panel-${activeScenario.id}`;
+
+  const handleScenarioKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft" && event.key !== "Home" && event.key !== "End") {
+      return;
+    }
+
+    event.preventDefault();
+    const lastIndex = riskView.scenarioCards.length - 1;
+    const nextIndex =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? lastIndex
+          : event.key === "ArrowRight"
+            ? (index + 1) % riskView.scenarioCards.length
+            : (index - 1 + riskView.scenarioCards.length) % riskView.scenarioCards.length;
+
+    setActiveScenarioIndex(nextIndex);
+    scenarioButtonRefs.current[nextIndex]?.focus();
+  };
+
+  return (
+    <section className="panel-surface rounded-[32px] p-6 sm:p-7">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="max-w-3xl">
+          <p className="text-[11px] uppercase tracking-[0.24em] text-amber-200/75">风险演练台</p>
+          <h2 className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">下单前先过一遍最坏剧本</h2>
+          <div className="mt-3 rounded-[24px] border border-amber-400/18 bg-amber-400/[0.07] px-4 py-3.5">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-amber-100/70">一句话结论</p>
+            <p className="mt-2 text-sm leading-7 text-slate-100">{riskView.summary}</p>
+          </div>
+        </div>
+        <div className="rounded-[22px] border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-xs leading-6 text-amber-50/90 lg:max-w-[320px]">
+          先接受最坏路径，再决定要不要下单。
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.22em] text-cyan-200/75">风险剧本卡</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">切换不同路径，看看这笔仓位会先在哪个环节让你难受。</p>
+          </div>
+          <p className="text-xs text-slate-500">左右键也可以切换剧本</p>
+        </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-3" role="tablist" aria-label="风险剧本卡">
+          {riskView.scenarioCards.map((scenario, index) => {
+            const tone = getRiskScenarioToneClasses(scenario.tone);
+            const isActive = index === activeScenarioIndex;
+            const tabId = `risk-scenario-tab-${scenario.id}`;
+            const panelId = `risk-scenario-panel-${scenario.id}`;
+            return (
+              <button
+                key={scenario.id}
+                id={tabId}
+                ref={(node) => {
+                  scenarioButtonRefs.current[index] = node;
+                }}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={panelId}
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => setActiveScenarioIndex(index)}
+                onKeyDown={(event) => handleScenarioKeyDown(event, index)}
+                className={`rounded-[24px] border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050b16] ${
+                  isActive ? tone.active : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/15 hover:bg-white/[0.06]"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className={`text-[11px] uppercase tracking-[0.22em] ${isActive ? tone.subtitle : "text-slate-500"}`}>{scenario.signalLabel}</p>
+                    <p className="mt-2 text-sm font-medium text-white">{scenario.title}</p>
+                  </div>
+                  <span className={`rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] ${isActive ? tone.badge : "border-white/10 bg-white/[0.04] text-slate-400"}`}>
+                    剧本 {index + 1}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm leading-7 text-slate-300">{scenario.description}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
+        <section
+          id={activePanelId}
+          className="rounded-[28px] border border-white/10 bg-white/[0.03] p-4 sm:p-5"
+          role="tabpanel"
+          aria-labelledby={activeTabId}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-cyan-200/75">当前剧本</p>
+              <h3 className="mt-2 text-lg font-semibold text-white">{activeScenario.title}</h3>
+            </div>
+            <span className="rounded-full border border-cyan-400/18 bg-cyan-400/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-cyan-100">
+              {activeScenario.signalLabel}
+            </span>
+          </div>
+          <p className="mt-4 text-sm leading-7 text-slate-100">{activeScenario.description}</p>
+          <div className="mt-4 rounded-[22px] border border-rose-400/18 bg-rose-400/[0.08] px-4 py-3.5">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-rose-200/70">这条路径会怎么让你难受</p>
+            <p className="mt-2 text-sm leading-7 text-slate-100">{activeScenario.linkedRisk}</p>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <article className="metric-tile rounded-[24px] p-4">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-rose-300/80">当前最相关的核心风险</p>
+            <p className="mt-2.5 text-sm leading-7 text-slate-100">{activeScenario.linkedRisk}</p>
           </article>
-        ))}
+          <article className="rounded-[24px] border border-amber-400/20 bg-amber-400/8 p-4">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-amber-200/80">当前最该执行的动作</p>
+            <p className="mt-2.5 text-sm leading-7 text-amber-50/95">{activeScenario.linkedCheck}</p>
+          </article>
+          <article className="rounded-[24px] border border-white/8 bg-slate-950/35 p-4">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-slate-400">核心风险总览</p>
+            <div className="mt-3 space-y-2">
+              {riskView.coreRisks.map((risk, index) => (
+                <div key={`${index}-${risk}`} className={`rounded-xl border px-3.5 py-3 text-sm leading-7 ${risk === activeScenario.linkedRisk ? "border-rose-400/18 bg-rose-400/[0.08] text-slate-100" : "border-white/6 bg-white/[0.03] text-slate-300"}`}>
+                  {risk}
+                </div>
+              ))}
+            </div>
+          </article>
+        </section>
+      </div>
+
+      <div className="mt-5 rounded-[28px] border border-amber-400/20 bg-amber-400/5 p-4 sm:p-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.22em] text-amber-200/80">操作纪律</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">先执行当前剧本最关键的一条，再回头检查完整清单。</p>
+          </div>
+        </div>
+        <div className="mt-4 rounded-[22px] border border-amber-300/18 bg-amber-400/[0.08] px-4 py-3.5">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-amber-100/70">当前剧本优先动作</p>
+          <p className="mt-2 text-sm leading-7 text-amber-50/95">{activeScenario.linkedCheck}</p>
+        </div>
+        <div className="mt-4 space-y-2">
+          {riskView.disciplineChecks.map((check, index) => (
+            <div key={`${index}-${check}`} className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${check === activeScenario.linkedCheck ? "border-amber-300/18 bg-amber-400/[0.06] text-slate-100" : "border-white/6 bg-white/[0.03] text-slate-200"}`}>
+              <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-amber-300/30 bg-amber-400/10 text-[11px] font-medium text-amber-100">
+                {index + 1}
+              </div>
+              <span className="leading-7">{check}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
 }
+
+function buildRiskViewModel(
+  strategy: RecommendationInput["strategy"],
+  recommendation?: Recommendation | LongCallRecommendation | SyntheticLongRecommendation,
+): RiskViewModel | null {
+  if (!recommendation || ("strategy" in recommendation && recommendation.strategy !== strategy)) {
+    return null;
+  }
+
+  const fallback = getDefaultRiskView(strategy);
+  const summary = recommendation.summary || fallback.summary;
+  const coreRisks = takeUniqueStrings(recommendation.risks, 3, fallback.coreRisks);
+  const scenarioReminders = fallback.scenarioReminders;
+  const disciplineChecks = fallback.disciplineChecks;
+
+  return {
+    summary,
+    coreRisks,
+    scenarioReminders,
+    disciplineChecks,
+    scenarioCards: buildRiskScenarioCards(strategy, scenarioReminders, coreRisks, disciplineChecks),
+  };
+}
+
+function getDefaultRiskView(strategy: RecommendationInput["strategy"]): RiskViewModel {
+  if (strategy === "covered-call") {
+    const riskView = {
+      summary: "备兑看涨最容易让人心态崩的，不是 BTC 小跌小涨，而是它突然狠狠干上去。你账上确实收到了权利金，但真正最香的那一段上涨，被你提前签字让出去了，到时候很容易一边赚钱一边难受。",
+      coreRisks: [
+        "最大的代价不是亏到没边，而是涨得越猛，你越会发现自己明显跑输什么都不做、直接拿着币的人。",
+        "越靠近到期、越靠近执行价，仓位就越不安静。前几天你可能觉得这是轻松收租，最后两天却会变成频繁盯盘、随时想处理。",
+        "如果这张合约盘口本来就薄，你看到的价格未必真能成交。等你想买回来或者滚到下一期时，价差和滑点会把你收的租金吃掉一块。",
+      ],
+      scenarioReminders: [
+        { title: "强趋势逼空", description: "最烦的是 BTC 连续拉升，而且不是慢慢涨，是几根大阳线直接往执行价脸上怼。这个时候你会很想继续扛，希望它别再涨了，但越犹豫，买回成本通常越高。" },
+        { title: "假平静后跳涨", description: "更坑人的情况是前几天特别安静，让你觉得这笔租金像白捡的一样，结果临近到期突然来一脚急拉。表面上你之前都很舒服，真正的压力却集中在最后那一小段时间爆发。" },
+        { title: "低流动性滚仓", description: "还有一种亏法不是方向错，而是执行差。你想把旧仓平掉再卖下一期，但盘口太薄，结果旧仓买贵了、新仓又卖便宜了，忙一圈之后发现赚的钱没有想象中多。" },
+      ],
+      disciplineChecks: [
+        "下单前先问自己一句最现实的话：如果 BTC 两天内直接冲到执行价上面，我能不能真心接受“这段涨幅不归我了”？",
+        "别只看年化和权利金好不好看，顺手把执行价离现价有多远、还剩几天到期、盘口厚不厚一起看掉，不然很容易被表面收益骗进去。",
+        "只要价格开始贴近执行价，就别再拖着不想。提前想好是买回来、滚到下一期，还是干脆接受被行权，不要等最后一天情绪上头再决定。",
+        "这种收租仓别一口气压太重，尤其不要把大部分现货都锁在同一个到期日里，不然行情一来你会发现自己几乎没有回旋空间。",
+      ],
+    } satisfies Omit<RiskViewModel, "scenarioCards">;
+
+    return {
+      ...riskView,
+      scenarioCards: buildRiskScenarioCards(strategy, riskView.scenarioReminders, riskView.coreRisks, riskView.disciplineChecks),
+    };
+  }
+
+  if (strategy === "cash-secured-put") {
+    const riskView = {
+      summary: "现金担保卖看跌说白了就是：你先收一笔钱，答应如果价格跌下来，你就按约定价把币接走。真正难受的点不是没收到租金，而是市场真跌起来时，你会发现自己像是在接一把还在往下掉的刀。",
+      coreRisks: [
+        "BTC 一旦快速下跌，你虽然收了权利金，但那点收入很快就会被更大的账面亏损盖过去，心理上会很难受。",
+        "很多人看到 IV 高、权利金厚就觉得很划算，但市场给这么多钱，通常不是做慈善，而是在提前给大波动定价。",
+        "如果你嘴上说自己愿意接货，心里其实只是想收租，那这个策略最容易在暴跌时把你的真实想法逼出来。",
+      ],
+      scenarioReminders: [
+        { title: "下跌加速破位", description: "最典型的坑是价格跌破关键位置以后还在继续放量往下砸。你原本以为是“稍微便宜一点接货”，结果很快变成“接得太早，现在一接就是套”。" },
+        { title: "IV 很高但方向不稳", description: "还有一种常见误区，是看到权利金特别厚就手痒。可权利金厚往往说明市场已经在担心后面会有大波动，你拿到的不是白送的钱，而是在替别人扛他们不想扛的风险。" },
+        { title: "资金占用过满", description: "如果你同时卖了好几笔 Put，看起来像是在多点收租，实际上是把现金一层层锁死。真等更好的接货位置来了，你反而可能没子弹再补。" },
+      ],
+      disciplineChecks: [
+        "只在你真心愿意买币的价格卖 Put，别为了多收一点租金，把执行价抬到你自己其实都嫌贵的位置。",
+        "下单前先把最坏情况想透：真被指派以后，你是愿意继续拿着，还是到时候会因为害怕继续跌而马上砍掉？如果答案是后者，那这单大概率不该做。",
+        "看这类仓位时，别只盯一张单能收多少钱，还要顺手看总共占了多少现金，别把全部接货预算一次性锁在同一批到期里。",
+        "IV 突然飙起来时，先问自己是不是市场在等一个大事件，而不是看到租金变厚就条件反射觉得“现在更划算”。",
+      ],
+    } satisfies Omit<RiskViewModel, "scenarioCards">;
+
+    return {
+      ...riskView,
+      scenarioCards: buildRiskScenarioCards(strategy, riskView.scenarioReminders, riskView.coreRisks, riskView.disciplineChecks),
+    };
+  }
+
+  if (strategy === "long-call") {
+    const riskView = {
+      summary: "买长期 Call 听上去很舒服，因为最惨也就是亏掉权利金，但真正折磨人的地方在于：你不光要看对方向，还要看对时间、别买在太贵的时候。三件事里错两件，这张单就会越拿越憋屈。",
+      coreRisks: [
+        "最大亏损虽然是有限的，但有限不代表少。最坏情况就是这张 Call 最后几乎归零，你交出去的那笔权利金可以完整亏掉。",
+        "很多人方向其实看对了，可涨得不够快、不够早，时间价值会一天天往下掉，所以你会遇到“观点没错，账户先亏”的痛苦阶段。",
+        "如果你是在 IV 很高的时候买进去，后面哪怕币价没怎么跌，只要市场情绪降温、IV 回落，这张 Call 也可能自己瘦下去。",
+      ],
+      scenarioReminders: [
+        { title: "方向对，时间错", description: "最气人的情况是：你最后真的看对了，BTC 也确实涨了，但涨得太晚。你本来是赌半年行情，结果市场先横几个月，等它真的发力时，你这张票已经被时间磨掉大半。" },
+        { title: "高 IV 追涨", description: "如果你是在大家最兴奋、市场最热的时候冲进去买 Call，那你其实是在高价买情绪。后面就算币价没立刻掉，单是 IV 回落，就足够让你的持仓先瘪一圈。" },
+        { title: "短线回撤洗掉信心", description: "长期看涨不代表中间不回撤。很常见的路径是先跌一段，把你的浮亏打出来，等你受不了砍掉以后，它才慢慢走回你原来判断的方向。" },
+      ],
+      disciplineChecks: [
+        "先把最坏结果想得特别现实一点：如果这笔权利金最后一分钱都拿不回来，你是不是依然睡得着？如果睡不着，就说明仓位已经大了。",
+        "宁可把到期时间拉长一点，也别拿太短的期限去赌一个本来就偏中长期的逻辑，不然你会被时间站在对立面。",
+        "下单前别只想着“我看涨”，还要顺手问一句“我是不是买贵了”。方向对和买点对，是两回事。",
+        "在开仓前就写好退出条件，比如亏到哪一档减仓、逻辑失效怎么认错，不要等仓位开始痛的时候才临场决定。",
+      ],
+    } satisfies Omit<RiskViewModel, "scenarioCards">;
+
+    return {
+      ...riskView,
+      scenarioCards: buildRiskScenarioCards(strategy, riskView.scenarioReminders, riskView.coreRisks, riskView.disciplineChecks),
+    };
+  }
+
+  const riskView = {
+    summary: "合成现货不是“高级版收租”，它更像是把你很强的看涨观点做成一张更猛的组合票。真涨起来它会很爽，但只要先跌，卖 Put 那条腿就会第一时间让你感受到：这不是轻松玩法。",
+    coreRisks: [
+      "真正会让你疼的，不是买进的 Call，而是卖出去的 Put。BTC 越往下掉，你越会有一种“我像提前接了现货而且还接得不轻”的感觉。",
+      "如果账户不是全现金担保，而是靠保证金扛着，那下跌带来的压力就不只是浮亏，还可能变成“保证金越来越紧、仓位越来越难拿”的双重挤压。",
+      "这不是一条腿的交易，而是两条腿一起动。开仓、平仓、滚动都得同时看两边的盘口和价差，执行稍微差一点，损耗就会被放大。",
+    ],
+    scenarioReminders: [
+      { title: "先跌后涨", description: "最典型的折磨不是一路走坏，而是你最后其实看对了，BTC 后来真的涨回去了，可前面先来一段急跌，把你的情绪和资金缓冲先打残。很多人不是死在方向，而是死在方向兑现之前。" },
+      { title: "波动率塌陷", description: "这类组合看着像接近现货，但它毕竟还是期权组合。行情如果不够强、只是软绵绵地往上蹭，IV 又同时掉下去，结果可能是你以为自己在吃上涨，实际组合表现却没有想象中跟得那么紧。" },
+      { title: "保证金环境收紧", description: "如果你不是全担保玩法，最怕的就是价格和保证金环境一起变坏。到那个时候，问题就不只是账面亏多少，而是你还有没有空间继续扛、会不会被迫在最差的位置处理仓位。" },
+    ],
+    disciplineChecks: [
+      "只有在你是真的强看涨，而且也愿意承受类似接现货下跌风险的时候，才考虑这类组合。别把它当成名字高级一点的收租玩法。",
+      "开仓前先把现金和保证金缓冲留够，不要把仓位建在边缘，不然市场一颠簸，你会先被风控和情绪打掉。",
+      "两条腿的流动性、价差、成交都要一起看，不要只盯着净权利金顺不顺眼。很多时候纸面上好看，真正执行时会打折。",
+      "进场前就写好失效条件：如果行情不再强、IV 结构开始变坏、保证金明显吃紧，你准备怎么退，不要等到真的出事才临时反应。",
+    ],
+  } satisfies Omit<RiskViewModel, "scenarioCards">;
+
+  return {
+    ...riskView,
+    scenarioCards: buildRiskScenarioCards(strategy, riskView.scenarioReminders, riskView.coreRisks, riskView.disciplineChecks),
+  };
+}
+
+function recommendationKey(recommendation?: Recommendation | LongCallRecommendation | SyntheticLongRecommendation): string {
+  if (!recommendation) {
+    return "fallback";
+  }
+
+  if ("pair" in recommendation) {
+    return `synthetic-long-${recommendation.pair.call.instrumentName}-${recommendation.pair.put.instrumentName}`;
+  }
+
+  return `${recommendation.strategy}-${recommendation.contract.instrumentName}`;
+}
+
+function buildRiskScenarioCards(
+  strategy: RecommendationInput["strategy"],
+  scenarioReminders: Array<{ title: string; description: string }>,
+  coreRisks: string[],
+  disciplineChecks: string[],
+): RiskScenarioCard[] {
+  return scenarioReminders.map((scenario, index) => ({
+    id: `${strategy}-${index}`,
+    title: scenario.title,
+    description: scenario.description,
+    tone: getRiskScenarioTone(strategy, index),
+    signalLabel: getRiskScenarioSignalLabel(strategy, index),
+    linkedRisk: coreRisks[index] ?? coreRisks[coreRisks.length - 1] ?? "先看仓位最坏路径。",
+    linkedCheck: disciplineChecks[index] ?? disciplineChecks[disciplineChecks.length - 1] ?? "先确认自己能承受最坏结果。",
+  }));
+}
+
+function getRiskScenarioTone(
+  strategy: RecommendationInput["strategy"],
+  index: number,
+): RiskScenarioCard["tone"] {
+  if (strategy === "synthetic-long") {
+    return index === 0 ? "fuchsia" : index === 1 ? "rose" : "amber";
+  }
+
+  if (strategy === "long-call") {
+    return index === 0 ? "emerald" : index === 1 ? "amber" : "rose";
+  }
+
+  return index === 0 ? "rose" : index === 1 ? "amber" : "cyan";
+}
+
+function getRiskScenarioSignalLabel(strategy: RecommendationInput["strategy"], index: number): string {
+  if (strategy === "covered-call") {
+    return ["最怕逼空", "最怕急拉", "最怕滑点"][index] ?? "重点路径";
+  }
+
+  if (strategy === "cash-secured-put") {
+    return ["最怕阴跌", "最怕高 IV", "最怕占资"][index] ?? "重点路径";
+  }
+
+  if (strategy === "long-call") {
+    return ["最怕时间错", "最怕 IV 贵", "最怕回撤洗仓"][index] ?? "重点路径";
+  }
+
+  return ["最怕先跌", "最怕 IV 塌", "最怕保证金挤压"][index] ?? "重点路径";
+}
+
+function getRiskScenarioToneClasses(tone: RiskScenarioCard["tone"]) {
+  if (tone === "fuchsia") {
+    return {
+      active: "border-fuchsia-400/30 bg-[linear-gradient(135deg,rgba(217,70,239,0.18),rgba(217,70,239,0.06))] text-white shadow-[0_6px_20px_-6px_rgba(217,70,239,0.35)]",
+      subtitle: "text-fuchsia-200/75",
+      badge: "border-fuchsia-400/20 bg-fuchsia-400/10 text-fuchsia-100",
+    };
+  }
+
+  if (tone === "emerald") {
+    return {
+      active: "border-emerald-400/30 bg-[linear-gradient(135deg,rgba(16,185,129,0.18),rgba(16,185,129,0.06))] text-white shadow-[0_6px_20px_-6px_rgba(16,185,129,0.35)]",
+      subtitle: "text-emerald-200/75",
+      badge: "border-emerald-400/20 bg-emerald-400/10 text-emerald-100",
+    };
+  }
+
+  if (tone === "rose") {
+    return {
+      active: "border-rose-400/30 bg-[linear-gradient(135deg,rgba(251,113,133,0.18),rgba(251,113,133,0.06))] text-white shadow-[0_6px_20px_-6px_rgba(251,113,133,0.35)]",
+      subtitle: "text-rose-200/75",
+      badge: "border-rose-400/20 bg-rose-400/10 text-rose-100",
+    };
+  }
+
+  if (tone === "amber") {
+    return {
+      active: "border-amber-400/30 bg-[linear-gradient(135deg,rgba(251,191,36,0.18),rgba(251,191,36,0.06))] text-white shadow-[0_6px_20px_-6px_rgba(251,191,36,0.35)]",
+      subtitle: "text-amber-200/75",
+      badge: "border-amber-400/20 bg-amber-400/10 text-amber-100",
+    };
+  }
+
+  return {
+    active: "border-cyan-400/30 bg-[linear-gradient(135deg,rgba(34,211,238,0.18),rgba(34,211,238,0.06))] text-white shadow-[0_6px_20px_-6px_rgba(34,211,238,0.35)]",
+    subtitle: "text-cyan-200/75",
+    badge: "border-cyan-400/20 bg-cyan-400/10 text-cyan-100",
+  };
+}
+
+function takeUniqueStrings(items: string[] | undefined, limit: number, fallback: string[]): string[] {
+  const merged = [...(items ?? []), ...fallback].map((item) => item.trim()).filter(Boolean);
+  return Array.from(new Set(merged)).slice(0, limit);
+}
+

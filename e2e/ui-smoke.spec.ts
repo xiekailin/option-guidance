@@ -314,6 +314,19 @@ test("策略对比和风险页能正常切换，并显示关键内容", async ({
   await expect(page.getByText("佩洛西打法（Long Call）")).toBeVisible();
 
   await page.getByRole("tab", { name: "风险提示" }).click();
-  await expect(page.getByText("你必须先接受这些风险")).toBeVisible();
-  await expect(page.getByText("持有 BTC 卖看涨的核心代价不是亏损无限，而是 BTC 大涨时你的上涨收益会被封顶。")).toBeVisible();
+  await expect(page.getByText("风险演练台")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "下单前先过一遍最坏剧本" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /强趋势逼空/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /假平静后跳涨/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /低流动性滚仓/ })).toBeVisible();
+
+  await expect(page.getByText("开仓前先问自己：如果 BTC 两天内直冲执行价上方，我愿不愿意接受收益被封顶？")).toBeVisible();
+  await page.getByRole("tab", { name: /假平静后跳涨/ }).click();
+  await expect(page.getByRole("heading", { name: "假平静后跳涨" })).toBeVisible();
+  await expect(page.getByText("不要只看年化，要同时看执行价距离、剩余天数和盘口深度。")).toBeVisible();
+
+  await page.getByRole("button", { name: "卖看跌", exact: true }).click();
+  await page.getByRole("tab", { name: "风险提示" }).click();
+  await expect(page.getByRole("tab", { name: /下跌加速破位/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "下跌加速破位" })).toBeVisible();
 });

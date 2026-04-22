@@ -114,6 +114,47 @@ select:focus-visible {
   background-position: center;
 }
 
+.panel-shell-content {
+  position: relative;
+  z-index: 1;
+}
+
+.panel-shell-fade-bar,
+.panel-shell-fade-compact,
+.panel-shell-fade-medium,
+.panel-shell-fade-large,
+.panel-shell-fade-hero {
+  position: absolute;
+  inset-inline: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(7, 12, 22, 0.16) 42%, rgba(4, 10, 20, 0.08) 68%, transparent 100%);
+}
+
+.panel-shell-fade-bar {
+  top: 2.75rem;
+  height: 3.5rem;
+}
+
+.panel-shell-fade-compact {
+  top: 3.75rem;
+  height: 5rem;
+}
+
+.panel-shell-fade-medium {
+  top: 4.5rem;
+  height: 6rem;
+}
+
+.panel-shell-fade-large {
+  top: 5rem;
+  height: 7rem;
+}
+
+.panel-shell-fade-hero {
+  top: 6rem;
+  height: 8rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
